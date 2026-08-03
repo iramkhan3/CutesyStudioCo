@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E3D9F7"/>
+      <stop offset="100%" stop-color="#FFF8EF"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <circle cx="150" cy="620" r="9" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="640" cy="180" r="7" fill="#FFFFFF" opacity="0.7"/>
+  <path d="M640 620 l7 18 18 7 -18 7 -7 18 -7-18 -18-7 18-7z" fill="#E8B84B" opacity="0.8"/>
+  <g transform="rotate(-18 400 400)">
+    <rect x="330" y="160" width="140" height="90" rx="30" fill="#FFFFFF"/>
+    <rect x="330" y="160" width="140" height="90" rx="30" fill="none" stroke="#C9B6EE" stroke-width="4"/>
+    <rect x="360" y="250" width="80" height="380" rx="14" fill="#FFFFFF"/>
+    <rect x="360" y="250" width="80" height="380" rx="14" fill="none" stroke="#C9B6EE" stroke-width="3"/>
+    <g fill="#FFFFFF" stroke="#C9B6EE" stroke-width="3">
+      <rect x="360" y="270" width="80" height="18"/>
+      <rect x="360" y="300" width="80" height="18"/>
+      <rect x="360" y="330" width="80" height="18"/>
+      <rect x="360" y="360" width="80" height="18"/>
+      <rect x="360" y="390" width="80" height="18"/>
+      <rect x="360" y="420" width="80" height="18"/>
+    </g>
+  </g>
+  <g transform="translate(400,200)">
+    <path d="M0 0c-16-24-54-28-66-6-9 15 4 32 28 32 16 0 30-11 38-26z" fill="#FF8C7A"/>
+    <path d="M0 0c16-24 54-28 66-6 9 15-4 32-28 32-16 0-30-11-38-26z" fill="#FF8C7A"/>
+    <circle cx="0" cy="0" r="9" fill="#F26C56"/>
+  </g>
+  <circle cx="300" cy="300" r="7" fill="#F9D8E0"/>
+  <circle cx="500" cy="500" r="7" fill="#D6EBF7"/>
+  <text x="400" y="720" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#8A7377">Photo coming soon — Combs</text>
+</svg>

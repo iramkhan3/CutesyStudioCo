@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFF8EF"/>
+      <stop offset="100%" stop-color="#E3D9F7"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <rect x="230" y="120" width="340" height="500" rx="10" fill="#FFFFFF"/>
+  <rect x="230" y="120" width="340" height="500" rx="10" fill="none" stroke="#C9B6EE" stroke-width="6"/>
+  <rect x="260" y="150" width="280" height="440" fill="#F3EEFC"/>
+  <circle cx="330" cy="230" r="26" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="360" cy="220" r="34" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="400" cy="235" r="24" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M400 420 l10 26 26 10 -26 10 -10 26 -10-26 -26-10 26-10z" fill="#E8B84B" opacity="0.9"/>
+  <path d="M320 500 l7 18 18 7 -18 7 -7 18 -7-18 -18-7 18-7z" fill="#FF8C7A" opacity="0.9"/>
+  <path d="M480 540 l6 15 15 6 -15 6 -6 15 -6-15 -15-6 15-6z" fill="#D6EBF7"/>
+  <circle cx="450" cy="330" r="6" fill="#F9D8E0"/>
+  <circle cx="500" cy="300" r="4" fill="#F9D8E0"/>
+  <text x="400" y="750" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#8A7377">Photo coming soon — Posters</text>
+</svg>

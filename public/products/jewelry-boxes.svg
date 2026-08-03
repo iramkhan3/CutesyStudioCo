@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2CD79"/>
+      <stop offset="100%" stop-color="#FFF8EF"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <circle cx="140" cy="200" r="8" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="660" cy="180" r="10" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="650" cy="640" r="7" fill="#FFFFFF" opacity="0.8"/>
+  <path d="M140 620 l7 18 18 7 -18 7 -7 18 -7-18 -18-7 18-7z" fill="#FF8C7A" opacity="0.8"/>
+  <!-- box base -->
+  <rect x="220" y="420" width="360" height="200" rx="24" fill="#FFFFFF"/>
+  <rect x="220" y="420" width="360" height="200" rx="24" fill="none" stroke="#C99A2E" stroke-width="4"/>
+  <!-- lid -->
+  <rect x="220" y="360" width="360" height="80" rx="20" fill="#FDEEF2"/>
+  <rect x="220" y="360" width="360" height="80" rx="20" fill="none" stroke="#F2B8C6" stroke-width="4"/>
+  <!-- pearls on lid -->
+  <circle cx="290" cy="400" r="9" fill="#E3D9F7"/>
+  <circle cx="330" cy="390" r="7" fill="#F9D8E0"/>
+  <circle cx="470" cy="392" r="8" fill="#D6EBF7"/>
+  <circle cx="510" cy="404" r="6" fill="#F9D8E0"/>
+  <g transform="translate(400,362)">
+    <path d="M0 0c-18-26-58-30-72-8-10 16 4 34 30 34 18 0 34-12 42-26z" fill="#FF8C7A"/>
+    <path d="M0 0c18-26 58-30 72-8 10 16-4 34-30 34-18 0-34-12-42-26z" fill="#FF8C7A"/>
+    <circle cx="0" cy="0" r="10" fill="#F26C56"/>
+  </g>
+  <text x="400" y="720" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#8A7377">Photo coming soon — Jewelry Boxes</text>
+</svg>
