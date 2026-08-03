@@ -11,7 +11,6 @@ import {
   CUSTOM_CASE_WEIGHTS,
   PHONE_MODELS,
   SURPRISE_ME_PRICE_INR,
-  USD_TO_INR_REFERENCE_RATE,
 } from "@/lib/constants";
 import type { CustomCaseMode } from "@/lib/types";
 import { CartIcon, GiftIcon, WandIcon } from "@/components/Icons";
@@ -71,7 +70,6 @@ export function CustomCaseBuilder() {
   const [added, setAdded] = useState(false);
 
   const price = mode === "build" ? CUSTOM_CASE_PRICE_INR : SURPRISE_ME_PRICE_INR;
-  const priceUsd = Math.round((price / USD_TO_INR_REFERENCE_RATE) * 100) / 100;
 
   const resolvedPhoneModel = phoneModel === PHONE_OTHER ? customPhoneModel.trim() : phoneModel;
   const resolvedTheme = theme === CUSTOM_TYPE_YOUR_OWN ? customTheme.trim() : theme;
@@ -101,7 +99,6 @@ export function CustomCaseBuilder() {
         id,
         name: mode === "build" ? "Custom Phone Case" : "Surprise Me Phone Case",
         image: "/products/phone-cases.svg",
-        priceUsd,
         priceInr: price,
         customization:
           mode === "build"
@@ -266,8 +263,7 @@ export function CustomCaseBuilder() {
 
       <div className="card mt-6 flex flex-col items-center gap-4 p-6 text-center">
         <div>
-          <span className="font-heading text-2xl font-bold text-ink">₹{price}</span>{" "}
-          <span className="text-sm text-ink/50">≈ ${priceUsd}</span>
+          <span className="font-heading text-2xl font-bold text-ink">₹{price}</span>
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           <button

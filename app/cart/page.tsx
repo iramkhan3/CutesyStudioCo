@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCartStore, cartSubtotalUsd, cartSubtotalInr } from "@/lib/store/cart";
+import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
-import { FREE_SHIPPING_THRESHOLD_INR, USD_TO_INR_REFERENCE_RATE } from "@/lib/constants";
+import { FREE_SHIPPING_THRESHOLD_INR } from "@/lib/constants";
 import { GiftIcon, MinusIcon, PlusIcon, SparkleIcon, TrashIcon, WandIcon } from "@/components/Icons";
 
 export default function CartPage() {
@@ -19,7 +19,6 @@ export default function CartPage() {
 
   const [couponInput, setCouponInput] = useState("");
 
-  const subtotalUsd = cartSubtotalUsd(items);
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode);
   const shippingInr = calculateShipping(subtotalInr);
@@ -75,9 +74,7 @@ export default function CartPage() {
               ) : (
                 <div className="font-heading font-semibold text-ink">{item.name}</div>
               )}
-              <div className="mt-1 text-sm text-ink/60">
-                ${item.priceUsd} <span className="text-ink/40">(≈ ₹{item.priceInr})</span>
-              </div>
+              <div className="mt-1 text-sm text-ink/60">₹{item.priceInr}</div>
               {item.kind === "custom" && (
                 <p className="mt-1 max-w-xs truncate text-xs text-ink/50">
                   {item.customization.mode === "build"
@@ -106,7 +103,7 @@ export default function CartPage() {
             </div>
 
             <div className="w-16 text-right font-heading font-semibold text-ink">
-              ${(item.priceUsd * item.quantity).toFixed(2)}
+              ₹{(item.priceInr * item.quantity).toFixed(2)}
             </div>
 
             <button
@@ -159,7 +156,7 @@ export default function CartPage() {
       <div className="mt-6 flex flex-col items-end gap-2 border-t border-ink/10 pt-6">
         <div className="flex w-full max-w-xs justify-between text-sm text-ink/60">
           <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} items)</span>
-          <span>${subtotalUsd.toFixed(2)}</span>
+          <span>₹{subtotalInr.toFixed(2)}</span>
         </div>
         {discount > 0 && (
           <div className="flex w-full max-w-xs justify-between text-sm text-pastel-dark">
@@ -172,8 +169,7 @@ export default function CartPage() {
           <span>{shippingInr === 0 ? "Free" : `₹${shippingInr.toFixed(2)}`}</span>
         </div>
         <div className="font-heading text-2xl font-bold text-ink">
-          ₹{totalInr.toFixed(2)}{" "}
-          <span className="text-sm font-normal text-ink/50">≈ ${(totalInr / USD_TO_INR_REFERENCE_RATE).toFixed(2)}</span>
+          ₹{totalInr.toFixed(2)}
         </div>
         <p className="text-xs text-ink/50">
           {shippingInr === 0

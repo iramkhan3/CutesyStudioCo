@@ -60,10 +60,6 @@ export const useCartStore = create<CartState>()(
   )
 );
 
-export function cartSubtotalUsd(items: CartLineItem[]): number {
-  return items.reduce((sum, i) => sum + i.priceUsd * i.quantity, 0);
-}
-
 export function cartSubtotalInr(items: CartLineItem[]): number {
   return items.reduce((sum, i) => sum + i.priceInr * i.quantity, 0);
 }

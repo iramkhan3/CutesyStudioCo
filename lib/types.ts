@@ -26,7 +26,6 @@ export type ProductCartItem = {
   slug: string;
   name: string;
   image: string;
-  priceUsd: number;
   priceInr: number;
   quantity: number;
 };
@@ -36,7 +35,6 @@ export type CustomCartItem = {
   id: string;
   name: string;
   image: string;
-  priceUsd: number;
   priceInr: number;
   quantity: number;
   customization: CustomCaseSelection;

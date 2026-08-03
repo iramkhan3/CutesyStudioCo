@@ -83,9 +83,8 @@ export default async function ProductPage({
           </h1>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="font-heading text-2xl font-bold text-pastel">
-              ${product.price_usd}
+              ₹{product.price_inr}
             </span>
-            <span className="text-sm text-ink/50">≈ ₹{product.price_inr} (charged in INR at checkout)</span>
           </div>
           <p className="mt-5 text-ink/70">{product.description}</p>
 

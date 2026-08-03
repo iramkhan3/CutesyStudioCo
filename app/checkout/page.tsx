@@ -5,7 +5,7 @@ import Script from "next/script";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCartStore, cartSubtotalInr, cartSubtotalUsd } from "@/lib/store/cart";
+import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
 import { SITE } from "@/lib/constants";
@@ -52,7 +52,6 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const subtotalUsd = cartSubtotalUsd(items);
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon } = calculateDiscount(subtotalInr, couponCode);
   const shippingInr = calculateShipping(subtotalInr);
@@ -254,7 +253,7 @@ export default function CheckoutPage() {
           <div className="mt-6 space-y-1 border-t border-ink/10 pt-4 text-sm">
             <div className="flex justify-between text-ink/60">
               <span>Subtotal</span>
-              <span>₹{subtotalInr.toFixed(2)} <span className="text-ink/40">(≈ ${subtotalUsd.toFixed(2)})</span></span>
+              <span>₹{subtotalInr.toFixed(2)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-pastel-dark">

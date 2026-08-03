@@ -35,8 +35,7 @@ export function ProductCard({ product }: { product: Product }) {
           </h3>
         </Link>
         <div className="mt-1 flex items-baseline gap-1.5">
-          <span className="font-heading text-lg font-bold text-ink">${product.price_usd}</span>
-          <span className="text-xs text-ink/50">≈ ₹{product.price_inr}</span>
+          <span className="font-heading text-lg font-bold text-ink">₹{product.price_inr}</span>
         </div>
 
         <div className="mt-auto pt-4">

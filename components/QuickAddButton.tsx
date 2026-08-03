@@ -18,7 +18,6 @@ export function QuickAddButton({ product }: { product: Product }) {
         slug: product.slug,
         name: product.name,
         image: product.images[0],
-        priceUsd: product.price_usd,
         priceInr: product.price_inr,
       },
       1

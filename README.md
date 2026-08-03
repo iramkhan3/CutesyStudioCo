@@ -59,8 +59,8 @@ isn't configured yet. Checkout and the newsletter signup will show a friendly
    server-side to create orders and verify payment signatures — never
    exposed to the client.
 4. **Currency note:** this checkout charges in **INR** using each product's
-   `price_inr` value (USD prices shown on the site are for buyer reference
-   only). Razorpay's Standard Checkout supports international cards, but
+   `price_inr` value — the whole site is INR-only, no USD anywhere.
+   Razorpay's Standard Checkout supports international cards, but
    whether your specific account can accept them depends on your Razorpay
    KYC/account settings — check your dashboard, or reach out to Razorpay
    support if international cards are declined.
@@ -188,9 +188,6 @@ this to a database table if you need expiry dates or per-customer codes later.
       `FREE_SHIPPING_THRESHOLD_INR` in `lib/constants.ts` — adjust the
       numbers there, or replace with carrier-calculated rates or
       international shipping if you need it later.
-- [ ] **Live USD↔INR reference rate** — `USD_TO_INR_REFERENCE_RATE` in
-      `lib/constants.ts` is a static approximation used only for display;
-      actual charges always use each product's stored `price_inr`.
 
 ## Project structure
 

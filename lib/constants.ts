@@ -89,11 +89,6 @@ export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
 export const SHIPPING_FLAT_RATE_INR = 99;
 export const FREE_SHIPPING_THRESHOLD_INR = 999;
 
-// Rough reference rate only — TODO: wire up a live FX rate API if you want
-// USD reference prices to stay accurate over time. Actual charges always run
-// on the price_inr value stored per-product, never a computed conversion.
-export const USD_TO_INR_REFERENCE_RATE = 83;
-
 export const READY_TO_SHIP_PRICE_INR = 1000;
 
 // ============================================================================
