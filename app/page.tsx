@@ -1,11 +1,25 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { EmailSignup } from "@/components/EmailSignup";
 import { DecorativeScatter } from "@/components/Decorative";
 import { WaveDivider } from "@/components/WaveDivider";
+import { HomeCarousel } from "@/components/HomeCarousel";
 import { SITE } from "@/lib/constants";
 import { getAllProducts } from "@/lib/products";
-import { HeartIcon, InstagramIcon, SparkleIcon } from "@/components/Icons";
+import { InstagramIcon, SparkleIcon } from "@/components/Icons";
+
+const CAROUSEL_SLIDES = [
+  { src: "/products/real/rainbow-hello-kitty-case.jpg", alt: "Pastel rainbow Hello Kitty decoden phone case" },
+  { src: "/products/real/cookies-cream-case.jpg", alt: "Cookies and cream themed decoden phone case" },
+  { src: "/products/real/carousel-dreams-case.jpg", alt: "Pastel carousel-themed decoden phone case" },
+  { src: "/products/real/lilac-garden-case-1.jpg", alt: "Lilac garden decoden phone case" },
+  { src: "/products/real/vanilla-carousel-case-1.jpg", alt: "Vanilla carousel decoden phone case" },
+  { src: "/products/real/cinnamoroll-sky-case.jpg", alt: "Cinnamoroll sky blue decoden phone case" },
+  { src: "/products/real/rainbow-noir-case.jpg", alt: "Rainbow noir decoden phone case" },
+  { src: "/products/real/christmas-sparkle-case.jpg", alt: "Christmas sparkle decoden phone case" },
+  { src: "/products/real/charms-in-hand.jpg", alt: "A handful of tiny charms ready to be placed" },
+];
 
 // Revalidate periodically so Supabase-backed product/stock changes show up
 // without a full redeploy, while still being served from cache most of the time.
@@ -40,6 +54,30 @@ export default async function HomePage() {
         <WaveDivider className="text-cream" />
       </section>
 
+      {/* Real pieces showcase */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center">
+          <span className="pill-tag mx-auto">Real Pieces, Real Magic</span>
+          <h2 className="section-heading mt-4">Not renders. Not stock photos.</h2>
+          <p className="mt-3 max-w-xl text-ink/70">
+            Every piece below is a real, finished decoden case that left this
+            desk — charms, cream swirls, and all.
+          </p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl3 shadow-softlg sm:aspect-square">
+            <Image
+              src="/products/real/merry-berry-case-1.jpg"
+              alt="Red and white Christmas-themed decoden phone case, handmade"
+              fill
+              sizes="(min-width: 768px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <HomeCarousel slides={CAROUSEL_SLIDES} />
+        </div>
+      </section>
+
       {/* Featured products */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
@@ -64,11 +102,14 @@ export default async function HomePage() {
       {/* About teaser */}
       <section className="relative overflow-hidden bg-lavender-light px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 md:grid-cols-2">
-          <div className="relative aspect-square w-full max-w-sm justify-self-center overflow-hidden rounded-xl3 bg-gradient-to-br from-blush via-lavender to-babyblue shadow-softlg md:justify-self-start">
-            {/* TODO: replace with a real photo of the maker / workspace */}
-            <div className="flex h-full w-full items-center justify-center">
-              <HeartIcon className="h-20 w-20 text-white/80" />
-            </div>
+          <div className="relative aspect-square w-full max-w-sm justify-self-center overflow-hidden rounded-xl3 shadow-softlg md:justify-self-start">
+            <Image
+              src="/products/real/rose-garden-sanrio-case.jpg"
+              alt="Pink and lavender Sanrio-themed decoden phone case, handmade"
+              fill
+              sizes="(min-width: 768px) 40vw, 90vw"
+              className="object-cover"
+            />
           </div>
           <div>
             <span className="pill-tag">Our Story</span>

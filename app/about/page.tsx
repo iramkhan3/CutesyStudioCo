@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { DecorativeScatter } from "@/components/Decorative";
-import { HeartIcon, InstagramIcon, SparkleIcon } from "@/components/Icons";
+import { InstagramIcon, SparkleIcon } from "@/components/Icons";
 import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
@@ -55,11 +56,14 @@ export default function AboutPage() {
 
       <section className="bg-lavender-light px-4 py-16 sm:px-6">
         <div className="mx-auto grid max-w-4xl grid-cols-1 items-center gap-10 md:grid-cols-[280px_1fr]">
-          <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-xl3 bg-gradient-to-br from-pastel-light via-blush to-lavender shadow-softlg">
-            {/* TODO: replace with a real photo of the maker */}
-            <div className="flex h-full w-full items-center justify-center">
-              <HeartIcon className="h-16 w-16 text-white/85" />
-            </div>
+          <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-xl3 shadow-softlg">
+            <Image
+              src="/products/real/charms-in-hand.jpg"
+              alt="A handful of tiny decoden charms, ready to be placed by hand"
+              fill
+              sizes="280px"
+              className="object-cover"
+            />
           </div>
           <div>
             <span className="pill-tag">Meet the Maker</span>
