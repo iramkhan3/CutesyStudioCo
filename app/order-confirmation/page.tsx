@@ -84,7 +84,7 @@ export default async function OrderConfirmationPage({
           </div>
           {order.discount_amount > 0 && (
             <div className="flex justify-between text-pastel-dark">
-              <span>Discount {order.coupon_code ? `(${order.coupon_code})` : ""}</span>
+              <span>Discount {order.coupon_code ? `(${order.coupon_code === "LAUNCH50" ? "Launch Offer" : order.coupon_code})` : ""}</span>
               <span>-₹{order.discount_amount.toFixed(2)}</span>
             </div>
           )}

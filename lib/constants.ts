@@ -103,45 +103,51 @@ export const SURPRISE_ME_PRICE_INR = 2000;
 // own" is always offered as a fallback so no customer is blocked from ordering.
 export const PHONE_MODELS: string[] = [
   // Apple
+  "iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 17 Air", "iPhone 17",
+  "iPhone 16e",
   "iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16 Plus", "iPhone 16",
   "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
   "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14 Plus", "iPhone 14",
   "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13", "iPhone 13 Mini",
   "iPhone 12", "iPhone 12 Mini", "iPhone 11", "iPhone SE (2022)",
   // Samsung
-  "Samsung Galaxy S24 Ultra", "Samsung Galaxy S24+", "Samsung Galaxy S24",
+  "Samsung Galaxy S25 Ultra", "Samsung Galaxy S25 Edge", "Samsung Galaxy S25+", "Samsung Galaxy S25",
+  "Samsung Galaxy S24 Ultra", "Samsung Galaxy S24+", "Samsung Galaxy S24", "Samsung Galaxy S24 FE",
   "Samsung Galaxy S23 Ultra", "Samsung Galaxy S23+", "Samsung Galaxy S23", "Samsung Galaxy S23 FE",
-  "Samsung Galaxy Z Fold 6", "Samsung Galaxy Z Flip 6", "Samsung Galaxy Z Fold 5", "Samsung Galaxy Z Flip 5",
+  "Samsung Galaxy Z Fold 7", "Samsung Galaxy Z Flip 7", "Samsung Galaxy Z Fold 6", "Samsung Galaxy Z Flip 6",
+  "Samsung Galaxy A56", "Samsung Galaxy A36", "Samsung Galaxy A26", "Samsung Galaxy A16",
   "Samsung Galaxy A55", "Samsung Galaxy A54", "Samsung Galaxy A34", "Samsung Galaxy A25", "Samsung Galaxy A15",
-  "Samsung Galaxy M55", "Samsung Galaxy M35", "Samsung Galaxy M15",
-  "Samsung Galaxy F55", "Samsung Galaxy F15",
+  "Samsung Galaxy M56", "Samsung Galaxy M36", "Samsung Galaxy M55", "Samsung Galaxy M35", "Samsung Galaxy M15",
+  "Samsung Galaxy F56", "Samsung Galaxy F55", "Samsung Galaxy F15",
   // OnePlus
-  "OnePlus 12", "OnePlus 12R", "OnePlus 11", "OnePlus 11R",
-  "OnePlus Nord 4", "OnePlus Nord CE 4", "OnePlus Nord 3", "OnePlus Nord CE 3 Lite",
+  "OnePlus 13", "OnePlus 13R", "OnePlus 12", "OnePlus 12R", "OnePlus 11",
+  "OnePlus Nord 5", "OnePlus Nord CE 5", "OnePlus Nord 4", "OnePlus Nord CE 4",
   // Xiaomi / Redmi / POCO
-  "Xiaomi 14", "Xiaomi 14 Civi", "Xiaomi 13 Pro",
-  "Redmi Note 13 Pro+", "Redmi Note 13 Pro", "Redmi Note 13", "Redmi Note 12 Pro+",
-  "Redmi 13C", "Redmi 12",
-  "POCO X6 Pro", "POCO X6", "POCO M6 Pro", "POCO F6", "POCO C65",
+  "Xiaomi 15 Ultra", "Xiaomi 15", "Xiaomi 15 Civi", "Xiaomi 14", "Xiaomi 14 Civi",
+  "Redmi Note 14 Pro+", "Redmi Note 14 Pro", "Redmi Note 14", "Redmi Note 13 Pro+", "Redmi Note 13 Pro", "Redmi Note 13",
+  "Redmi 14C", "Redmi 13C",
+  "POCO X7 Pro", "POCO X7", "POCO X6 Pro", "POCO X6", "POCO M6 Pro", "POCO F6", "POCO C71",
   // Vivo
-  "Vivo V30 Pro", "Vivo V30", "Vivo V29", "Vivo Y200", "Vivo Y100", "Vivo Y28",
-  "Vivo T3 Pro", "Vivo T3x",
+  "Vivo X200 Pro", "Vivo X200", "Vivo V40 Pro", "Vivo V30 Pro", "Vivo V30", "Vivo V29",
+  "Vivo Y200", "Vivo Y100", "Vivo Y28", "Vivo T3 Pro", "Vivo T3x",
   // Oppo
-  "Oppo Reno 12 Pro", "Oppo Reno 11 Pro", "Oppo F25 Pro", "Oppo A79", "Oppo A59", "Oppo K12x",
+  "Oppo Find X8 Pro", "Oppo Find X8", "Oppo Reno 13 Pro", "Oppo Reno 12 Pro", "Oppo Reno 11 Pro",
+  "Oppo F27 Pro", "Oppo F25 Pro", "Oppo A79", "Oppo A59", "Oppo K12x",
   // Realme
-  "Realme 12 Pro+", "Realme 12 Pro", "Realme 12x", "Realme Narzo 70 Pro", "Realme Narzo 70",
-  "Realme C67", "Realme GT 6",
+  "Realme GT 7", "Realme GT 6", "Realme 13 Pro+", "Realme 13 Pro", "Realme 12 Pro+", "Realme 12 Pro",
+  "Realme Narzo 70 Pro", "Realme Narzo 70", "Realme C67",
   // Google
-  "Google Pixel 9 Pro", "Google Pixel 9", "Google Pixel 8 Pro", "Google Pixel 8",
-  "Google Pixel 8a", "Google Pixel 7a",
+  "Google Pixel 10 Pro", "Google Pixel 10", "Google Pixel 9 Pro", "Google Pixel 9",
+  "Google Pixel 9a", "Google Pixel 8a", "Google Pixel 7a",
   // Motorola
-  "Moto Edge 50 Pro", "Moto Edge 50", "Moto G85", "Moto G64", "Moto G34", "Moto Razr 50 Ultra",
+  "Moto Edge 60 Pro", "Moto Edge 50 Pro", "Moto Edge 50", "Moto G95", "Moto G85", "Moto G64",
+  "Moto Razr 60 Ultra", "Moto Razr 50 Ultra",
   // iQOO
-  "iQOO 12", "iQOO Neo 9 Pro", "iQOO Z9", "iQOO Z9x",
+  "iQOO 13", "iQOO 12", "iQOO Neo 10", "iQOO Neo 9 Pro", "iQOO Z10", "iQOO Z9x",
   // Nothing
-  "Nothing Phone (2)", "Nothing Phone (2a)", "Nothing Phone (1)",
+  "Nothing Phone (3)", "Nothing Phone (2a) Plus", "Nothing Phone (2)", "Nothing Phone (2a)",
   // Others
-  "Asus ROG Phone 8", "Lava Blaze 2", "Micromax In Note 2",
+  "Asus ROG Phone 9", "Asus ROG Phone 8", "Lava Blaze 2", "Micromax In Note 2",
   // Fallback
   "My phone isn't listed (type below)",
 ] as const;
@@ -192,4 +198,11 @@ export type Coupon = {
 // always-on codes (seasonal codes, per-customer codes, expiry dates, etc.).
 export const COUPONS: Record<string, Coupon> = {
   CUTE30: { code: "CUTE30", percentOff: 30, minPurchaseInr: 500 },
+  LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0 },
 };
+
+// Site-wide launch offer — automatically applied to every order with no code
+// needed, no minimum purchase. Flip to false (or delete) once the launch
+// promo period ends; existing coupon codes keep working either way.
+export const LAUNCH_OFFER_ACTIVE = true;
+export const AUTO_APPLY_COUPON_CODE = "LAUNCH50";

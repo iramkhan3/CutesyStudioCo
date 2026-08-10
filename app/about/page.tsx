@@ -30,20 +30,25 @@ export default function AboutPage() {
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <div className="space-y-6 text-ink/80">
           <p>
-            CutesyStudioCo started the way a lot of good things do — with too
-            much free time, a hot glue gun, and a phone case that felt a
-            little too plain. What began as decorating my own case with a
-            couple of tiny charms turned into decorating cases for friends,
-            then friends of friends, and eventually into a proper decoden
-            studio that now covers everything from tablet stands to jewelry
-            boxes.
+            CutesyStudioCo started the way a lot of good things do — with a
+            dream and a life that felt a little too plain. What began as
+            decorating my own case with a couple of cute charms and creamy
+            decoden turned into a passion to transform the world with a dash
+            of joy. Every object that you see daily can make you happy —
+            everything from phone cases and covers, jewelry boxes, mirrors,
+            hairbrushes, tablet stands to trinket boxes.
           </p>
           <p>
             If you&apos;re new to the term: <strong className="text-ink">decoden</strong> is
             a Japanese decorating style built around rhinestones, cute
             charms, and swirls of faux cream, layered on until an everyday
             object looks like it belongs in a dessert shop. It&apos;s fussy, it&apos;s
-            slow, and it is genuinely my favorite way to spend an afternoon.
+            slow, and it is genuinely my favorite way to spend my leisure time.
+          </p>
+          <p>
+            It is made from 100% silicone and is completely safe and
+            enhances strength of the objects. All charms are firmly attached
+            to the silicone and don&apos;t fall off!
           </p>
           <p>
             Every single piece that leaves this studio is made by hand, one
@@ -51,8 +56,8 @@ export default function AboutPage() {
             alike. I place each charm myself, seal it by hand, and pack it
             up with as much care as I put into making it. When you order
             from CutesyStudioCo, you&apos;re not just getting an accessory,
-            you&apos;re getting a little bit of joy in the mail — which is the
-            whole point.
+            you&apos;re getting a little bit of joy in the mail — which is my
+            dream.
           </p>
         </div>
       </section>

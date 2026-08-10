@@ -1,4 +1,4 @@
-import { COUPONS, type Coupon } from "@/lib/constants";
+import { AUTO_APPLY_COUPON_CODE, COUPONS, LAUNCH_OFFER_ACTIVE, type Coupon } from "@/lib/constants";
 
 export function getCoupon(code: string): Coupon | null {
   const normalized = code.trim().toUpperCase();
@@ -17,11 +17,13 @@ export type CouponResult = {
  * anywhere but here run against the server's own subtotal.
  */
 export function calculateDiscount(subtotalInr: number, code?: string | null): CouponResult {
-  if (!code || !code.trim()) {
+  const effectiveCode = code && code.trim() ? code : LAUNCH_OFFER_ACTIVE ? AUTO_APPLY_COUPON_CODE : null;
+
+  if (!effectiveCode) {
     return { discount: 0, coupon: null, error: null };
   }
 
-  const coupon = getCoupon(code);
+  const coupon = getCoupon(effectiveCode);
   if (!coupon) {
     return { discount: 0, coupon: null, error: "That coupon code isn't valid." };
   }

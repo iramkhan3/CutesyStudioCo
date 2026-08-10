@@ -257,7 +257,7 @@ export default function CheckoutPage() {
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-pastel-dark">
-                <span>Discount ({coupon?.code})</span>
+                <span>Discount ({coupon?.code === "LAUNCH50" ? "Launch Offer" : coupon?.code})</span>
                 <span>-₹{discount.toFixed(2)}</span>
               </div>
             )}

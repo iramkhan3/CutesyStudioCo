@@ -21,6 +21,15 @@ const CAROUSEL_SLIDES = [
   { src: "/products/real/charms-in-hand.jpg", alt: "A handful of tiny charms ready to be placed" },
 ];
 
+const INSTAGRAM_TEASER_IMAGES = [
+  "/marketing/behind-the-scenes.jpg",
+  "/marketing/christmas-magic-limited.jpg",
+  "/marketing/handmade-magic-rainbow.jpg",
+  "/marketing/christmas-dream-case.jpg",
+  "/marketing/one-of-a-kind-collage.jpg",
+  "/marketing/handmade-magic-vibe.jpg",
+];
+
 // Revalidate periodically so Supabase-backed product/stock changes show up
 // without a full redeploy, while still being served from cache most of the time.
 export const revalidate = 300;
@@ -141,28 +150,26 @@ export default async function HomePage() {
               close-up shots of tiny charms. Come say hi!
             </p>
           </div>
-          {/* TODO: replace this placeholder grid with a real Instagram feed embed
-              (e.g. SnapWidget, Behold.so, or the Instagram Basic Display API —
-              all require an API key/embed code you'll add here). */}
+          {/* TODO: swap for a real Instagram feed embed (e.g. SnapWidget, Behold.so,
+              or the Instagram Basic Display API) once you have an embed key —
+              these are our own promo graphics as a stand-in for now. */}
           <div className="mt-10 grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-6">
-            {[
-              "from-blush to-lavender",
-              "from-lavender to-babyblue",
-              "from-babyblue to-cream",
-              "from-cream to-blush",
-              "from-pastel-light to-blush",
-              "from-lavender to-pastel-light",
-            ].map((gradient, i) => (
+            {INSTAGRAM_TEASER_IMAGES.map((src, i) => (
               <a
-                key={i}
+                key={src}
                 href={SITE.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`relative aspect-square overflow-hidden rounded-xl2 bg-gradient-to-br ${gradient} shadow-soft transition-transform hover:scale-[1.03]`}
+                className="relative aspect-square overflow-hidden rounded-xl2 shadow-soft transition-transform hover:scale-[1.03]"
               >
-                <div className="flex h-full w-full items-center justify-center">
-                  <SparkleIcon className="h-6 w-6 text-white/70" />
-                </div>
+                <Image
+                  src={src}
+                  alt="CutesyStudioCo Instagram post preview"
+                  fill
+                  sizes="(min-width: 768px) 16vw, 33vw"
+                  className="object-cover"
+                  priority={i === 0}
+                />
               </a>
             ))}
           </div>

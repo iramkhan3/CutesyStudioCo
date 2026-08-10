@@ -18,6 +18,7 @@ export default function CartPage() {
   const clearCoupon = useCartStore((s) => s.clearCoupon);
 
   const [couponInput, setCouponInput] = useState("");
+  const [showCouponInput, setShowCouponInput] = useState(false);
 
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode);
@@ -51,7 +52,7 @@ export default function CartPage() {
 
       <div className="mt-8 flex flex-col gap-4">
         {items.map((item) => (
-          <div key={item.id} className="card flex items-center gap-4 p-4">
+          <div key={item.id} className="card flex flex-wrap items-center gap-4 p-4">
             {item.kind === "product" ? (
               <Link href={`/shop/${item.slug}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl2 bg-blush-light">
                 <Image src={item.image} alt={item.name} fill className="object-cover" />
@@ -66,7 +67,7 @@ export default function CartPage() {
               </div>
             )}
 
-            <div className="flex-1">
+            <div className="min-w-[120px] flex-1">
               {item.kind === "product" ? (
                 <Link href={`/shop/${item.slug}`} className="font-heading font-semibold text-ink hover:text-pastel">
                   {item.name}
@@ -84,72 +85,109 @@ export default function CartPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 rounded-full border-2 border-ink/10 px-2 py-1">
+            <div className="ml-auto flex items-center gap-3 sm:ml-0">
+              <div className="flex items-center gap-2 rounded-full border-2 border-ink/10 px-2 py-1">
+                <button
+                  aria-label="Decrease quantity"
+                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                  className="rounded-full p-1 text-ink/70 hover:bg-blush-light"
+                >
+                  <MinusIcon className="h-4 w-4" />
+                </button>
+                <span className="w-5 text-center font-heading text-sm font-semibold">{item.quantity}</span>
+                <button
+                  aria-label="Increase quantity"
+                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                  className="rounded-full p-1 text-ink/70 hover:bg-blush-light"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="w-16 text-right font-heading font-semibold text-ink">
+                ₹{(item.priceInr * item.quantity).toFixed(2)}
+              </div>
+
               <button
-                aria-label="Decrease quantity"
-                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                className="rounded-full p-1 text-ink/70 hover:bg-blush-light"
+                aria-label={`Remove ${item.name}`}
+                onClick={() => removeItem(item.id)}
+                className="rounded-full p-2 text-ink/40 hover:bg-blush-light hover:text-pastel"
               >
-                <MinusIcon className="h-4 w-4" />
-              </button>
-              <span className="w-5 text-center font-heading text-sm font-semibold">{item.quantity}</span>
-              <button
-                aria-label="Increase quantity"
-                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                className="rounded-full p-1 text-ink/70 hover:bg-blush-light"
-              >
-                <PlusIcon className="h-4 w-4" />
+                <TrashIcon className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="w-16 text-right font-heading font-semibold text-ink">
-              ₹{(item.priceInr * item.quantity).toFixed(2)}
-            </div>
-
-            <button
-              aria-label={`Remove ${item.name}`}
-              onClick={() => removeItem(item.id)}
-              className="rounded-full p-2 text-ink/40 hover:bg-blush-light hover:text-pastel"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
           </div>
         ))}
       </div>
 
       <div className="mt-8 card p-5">
-        <span className="font-heading text-sm font-semibold text-ink/70">Coupon Code</span>
         {couponCode ? (
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="text-sm text-ink/70">
-              {coupon ? (
-                <>
-                  <span className="font-semibold text-pastel">{coupon.code}</span> applied — {coupon.percentOff}% off
-                </>
-              ) : (
-                <span className="text-pastel-dark">{couponError || "This code isn't valid for your cart yet."}</span>
+          <>
+            <span className="font-heading text-sm font-semibold text-ink/70">Coupon Code</span>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="text-sm text-ink/70">
+                {coupon ? (
+                  <>
+                    <span className="font-semibold text-pastel">{coupon.code}</span> applied — {coupon.percentOff}% off
+                  </>
+                ) : (
+                  <span className="text-pastel-dark">{couponError || "This code isn't valid for your cart yet."}</span>
+                )}
+              </div>
+              <button
+                onClick={clearCoupon}
+                className="font-heading text-xs font-semibold text-ink/50 underline hover:text-pastel"
+              >
+                Remove
+              </button>
+            </div>
+          </>
+        ) : coupon?.code === "LAUNCH50" ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-heading text-sm font-semibold text-pastel-dark">
+                🎉 Launch Offer — 50% off, applied automatically!
+              </p>
+              {!showCouponInput && (
+                <button
+                  onClick={() => setShowCouponInput(true)}
+                  className="shrink-0 font-heading text-xs font-semibold text-ink/50 underline hover:text-pastel"
+                >
+                  Have a different code?
+                </button>
               )}
             </div>
-            <button
-              onClick={clearCoupon}
-              className="font-heading text-xs font-semibold text-ink/50 underline hover:text-pastel"
-            >
-              Remove
-            </button>
+            {showCouponInput && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  placeholder="Enter coupon code"
+                  className="flex-1 rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+                />
+                <button onClick={handleApplyCoupon} className="btn-secondary">
+                  Apply
+                </button>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              value={couponInput}
-              onChange={(e) => setCouponInput(e.target.value)}
-              placeholder="Enter coupon code"
-              className="flex-1 rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
-            />
-            <button onClick={handleApplyCoupon} className="btn-secondary">
-              Apply
-            </button>
-          </div>
+          <>
+            <span className="font-heading text-sm font-semibold text-ink/70">Coupon Code</span>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                placeholder="Enter coupon code"
+                className="flex-1 rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+              />
+              <button onClick={handleApplyCoupon} className="btn-secondary">
+                Apply
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -160,7 +198,7 @@ export default function CartPage() {
         </div>
         {discount > 0 && (
           <div className="flex w-full max-w-xs justify-between text-sm text-pastel-dark">
-            <span>Discount ({coupon?.code})</span>
+            <span>Discount ({coupon?.code === "LAUNCH50" ? "Launch Offer" : coupon?.code})</span>
             <span>-₹{discount.toFixed(2)}</span>
           </div>
         )}

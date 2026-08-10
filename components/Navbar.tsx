@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SITE } from "@/lib/constants";
+import { LAUNCH_OFFER_ACTIVE, SITE } from "@/lib/constants";
 import { useCartStore, cartItemCount } from "@/lib/store/cart";
 import { CartIcon, CloseIcon, InstagramIcon, MenuIcon } from "@/components/Icons";
 
@@ -24,6 +24,11 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/5 bg-cream/90 backdrop-blur-md">
+      {LAUNCH_OFFER_ACTIVE && (
+        <div className="bg-gradient-to-r from-pastel-dark to-pastel px-4 py-2 text-center font-heading text-xs font-semibold text-white sm:text-sm">
+          🎉 Launch Offer — Flat 50% Off Everything, No Code Needed!
+        </div>
+      )}
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="group flex items-center" aria-label={SITE.name}>
           <Image
