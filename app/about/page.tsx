@@ -81,10 +81,12 @@ export default function AboutPage() {
               bringing joy to the world, one cute thing at a time.
             </p>
             <p className="mt-4 text-ink/70">
-              When I&apos;m not elbow-deep in charms and glue, I&apos;m usually
-              scrolling Pinterest for the next color palette, or hoarding
-              tiny bows in far too many sizes. Thank you for being here —
-              it genuinely means a lot.
+              Most days I&apos;m just an overwhelmed girl running on chai and
+              deadlines like everyone else — but the second I sit down with
+              a glue gun and a tray of tiny charms, my brain finally goes
+              quiet. This studio is where I come to breathe, one bow and one
+              bead at a time. Thank you for being here — it genuinely means
+              a lot.
             </p>
             <a
               href={SITE.instagramUrl}

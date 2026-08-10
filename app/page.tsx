@@ -117,11 +117,11 @@ export default async function HomePage() {
               Made by hand, made with heart
             </h2>
             <p className="mt-4 text-ink/70">
-              What started as a hobby covering phone cases in charms for
-              friends has grown into a full decoden studio. Every single
-              piece that leaves this desk is placed, glued, and sealed by
-              hand — no factories, no shortcuts, just a lot of tiny charms
-              and a lot of love.
+              What started as a hobby covering phone cases in luxurious cream
+              and cute charms has grown into a full decoden studio. Every
+              single piece that leaves this table is placed, glued, and
+              sealed by hand — no factories, no shortcuts, just a lot of
+              hardwork and a lot of love.
             </p>
             <Link href="/about" className="btn-secondary mt-6 inline-flex">
               Meet the Maker
