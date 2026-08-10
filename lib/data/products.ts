@@ -313,4 +313,40 @@ export const SEED_PRODUCTS: Product[] = [
     stock_quantity: 1,
     active: true,
   },
+  {
+    id: "10000000-0000-0000-0000-000000000024",
+    slug: "ready-to-ship-bear-charm-hairbrush",
+    name: "Ready-to-Ship Bear Charm Hairbrush",
+    category: "combs",
+    description:
+      "A wide-tooth hairbrush with a purple charm garden handle — three sweet bear charms nestled in swirls of cream. One-of-one, ships in 1-2 days.",
+    price_inr: 1000,
+    images: ["/products/real/bear-charm-hairbrush.jpg"],
+    stock_quantity: 1,
+    active: true,
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000025",
+    slug: "ready-to-ship-bow-heart-mirror",
+    name: "Ready-to-Ship Bow & Heart Mirror",
+    category: "mirrors",
+    description:
+      "A rectangular vanity mirror framed in lilac and pink cream, dotted with hearts, bows, and butterflies. One-of-one, ships in 1-2 days.",
+    price_inr: 1000,
+    images: ["/products/real/bow-heart-mirror.jpg"],
+    stock_quantity: 1,
+    active: true,
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000026",
+    slug: "ready-to-ship-hello-kitty-bag-charm",
+    name: "Ready-to-Ship Hello Kitty Bag Charm",
+    category: "keychains",
+    description:
+      "A Hello Kitty bag charm dressed in pink cream swirls, bows, and a little \"LOVE\" charm — the easiest way to decoden-ify your bag or keys. One-of-one, ships in 1-2 days.",
+    price_inr: 1000,
+    images: ["/products/real/hello-kitty-bag-charm.jpg"],
+    stock_quantity: 1,
+    active: true,
+  },
 ];

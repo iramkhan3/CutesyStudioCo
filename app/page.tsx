@@ -18,6 +18,8 @@ const CAROUSEL_SLIDES = [
   { src: "/products/real/cinnamoroll-sky-case.jpg", alt: "Cinnamoroll sky blue decoden phone case" },
   { src: "/products/real/rainbow-noir-case.jpg", alt: "Rainbow noir decoden phone case" },
   { src: "/products/real/christmas-sparkle-case.jpg", alt: "Christmas sparkle decoden phone case" },
+  { src: "/marketing/pastel-cases-pair.jpg", alt: "A pair of pastel decoden phone cases side by side" },
+  { src: "/marketing/three-cases-lineup.jpg", alt: "Three finished decoden phone cases lined up" },
   { src: "/products/real/charms-in-hand.jpg", alt: "A handful of tiny charms ready to be placed" },
 ];
 
@@ -73,17 +75,36 @@ export default async function HomePage() {
             desk — charms, cream swirls, and all.
           </p>
         </div>
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl3 shadow-softlg sm:aspect-square">
+        <div className="mx-auto mt-10 max-w-xl">
+          <HomeCarousel slides={CAROUSEL_SLIDES} />
+        </div>
+      </section>
+
+      {/* Marketing banner */}
+      <section className="bg-lavender-light px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 md:grid-cols-2">
+          <div className="relative mx-auto aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl3 shadow-softlg">
             <Image
-              src="/products/real/merry-berry-case-1.jpg"
-              alt="Red and white Christmas-themed decoden phone case, handmade"
+              src="/marketing/handmade-magic-rainbow.jpg"
+              alt="Handmade decoden phone case promotional graphic"
               fill
-              sizes="(min-width: 768px) 50vw, 100vw"
+              sizes="(min-width: 768px) 33vw, 80vw"
               className="object-cover"
             />
           </div>
-          <HomeCarousel slides={CAROUSEL_SLIDES} />
+          <div className="text-center md:text-left">
+            <span className="pill-tag">Launch Offer</span>
+            <h2 className="mt-4 font-heading text-3xl font-semibold text-ink sm:text-4xl">
+              Flat 50% off, everything
+            </h2>
+            <p className="mt-4 text-ink/70">
+              To celebrate going live, every single piece — ready-to-ship or
+              made to order — is 50% off, automatically, no code needed.
+            </p>
+            <Link href="/shop" className="btn-primary mt-6 inline-flex">
+              <SparkleIcon className="h-4 w-4" /> Shop the Sale
+            </Link>
+          </div>
         </div>
       </section>
 

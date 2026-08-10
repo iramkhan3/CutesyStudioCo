@@ -9,30 +9,30 @@ const config: Config = {
     extend: {
       colors: {
         blush: {
-          DEFAULT: "#F9D8E0",
-          light: "#FDEEF2",
-          dark: "#F2B8C6",
+          DEFAULT: "#F4A9C6",
+          light: "#FBDCE8",
+          dark: "#E8789F",
         },
         lavender: {
-          DEFAULT: "#E3D9F7",
-          light: "#F3EEFC",
-          dark: "#C9B6EE",
+          DEFAULT: "#C9AEF0",
+          light: "#E4D4FA",
+          dark: "#A981E0",
         },
         cream: {
-          DEFAULT: "#FFF8EF",
-          light: "#FFFDF9",
-          dark: "#FBEEDA",
+          DEFAULT: "#FFF4E0",
+          light: "#FFFBF3",
+          dark: "#F9E3B8",
         },
         babyblue: {
-          DEFAULT: "#D6EBF7",
-          light: "#EDF7FC",
-          dark: "#B4DCF0",
+          DEFAULT: "#A8D8F0",
+          light: "#D3ECFA",
+          dark: "#7CC0E8",
         },
-        // Primary/CTA color — a soft pastel orchid pink-purple.
+        // Primary/CTA color — a pastel orchid pink-purple.
         pastel: {
-          DEFAULT: "#DB9DC4",
-          light: "#F3D6EA",
-          dark: "#C17FAE",
+          DEFAULT: "#D888BB",
+          light: "#EDBEDD",
+          dark: "#B968A0",
         },
         gold: {
           DEFAULT: "#E8B84B",
@@ -60,7 +60,7 @@ const config: Config = {
       },
       backgroundImage: {
         "pastel-hero":
-          "radial-gradient(circle at 15% 20%, #FDEEF2 0%, transparent 45%), radial-gradient(circle at 85% 15%, #EDF7FC 0%, transparent 45%), radial-gradient(circle at 50% 90%, #F3EEFC 0%, transparent 55%)",
+          "radial-gradient(circle at 15% 20%, #FBDCE8 0%, transparent 48%), radial-gradient(circle at 85% 15%, #D3ECFA 0%, transparent 48%), radial-gradient(circle at 50% 90%, #E4D4FA 0%, transparent 58%)",
       },
       keyframes: {
         float: {
