@@ -28,11 +28,11 @@ const config: Config = {
           light: "#EDF7FC",
           dark: "#B4DCF0",
         },
-        // Primary/CTA color — a pastel orchid pink-purple.
+        // Primary/CTA color — a soft pastel orchid pink-purple.
         pastel: {
-          DEFAULT: "#D291BC",
-          light: "#E8B9D6",
-          dark: "#B06A98",
+          DEFAULT: "#DB9DC4",
+          light: "#F3D6EA",
+          dark: "#C17FAE",
         },
         gold: {
           DEFAULT: "#E8B84B",
@@ -56,6 +56,7 @@ const config: Config = {
       boxShadow: {
         soft: "0 8px 24px -8px rgba(91, 75, 79, 0.18)",
         softlg: "0 16px 40px -12px rgba(91, 75, 79, 0.22)",
+        glow: "0 10px 28px -8px rgba(219, 157, 196, 0.45)",
       },
       backgroundImage: {
         "pastel-hero":

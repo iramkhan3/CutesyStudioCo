@@ -18,11 +18,11 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-pastel px-6 py-3 font-heading text-sm font-semibold text-white shadow-soft transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:-rotate-1 hover:bg-pastel-dark active:scale-95 active:translate-y-0 active:rotate-0;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pastel-dark to-pastel bg-[length:160%_100%] bg-left px-6 py-3 font-heading text-sm font-semibold text-white shadow-glow transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-105 hover:-rotate-1 hover:bg-right active:scale-95 active:translate-y-0 active:rotate-0;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-ink/10 bg-white px-6 py-3 font-heading text-sm font-semibold text-ink shadow-soft transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:rotate-1 hover:border-lavender-dark active:scale-95 active:translate-y-0 active:rotate-0;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-pastel-light bg-white px-6 py-3 font-heading text-sm font-semibold text-ink shadow-soft transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:rotate-1 hover:border-pastel active:scale-95 active:translate-y-0 active:rotate-0;
   }
 
   .btn-outline-cream {
@@ -30,7 +30,7 @@
   }
 
   .card {
-    @apply rounded-xl3 bg-white shadow-soft transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-softlg;
+    @apply rounded-xl3 bg-white shadow-soft transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-glow;
   }
 
   .section-heading {
@@ -38,6 +38,6 @@
   }
 
   .pill-tag {
-    @apply inline-flex items-center rounded-full bg-lavender-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70 shadow-soft;
+    @apply inline-flex items-center rounded-full bg-gradient-to-r from-blush-light via-lavender-light to-babyblue-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70 shadow-soft;
   }
 }
