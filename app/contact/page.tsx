@@ -4,9 +4,12 @@ import { InstagramIcon, MailIcon, SparkleIcon } from "@/components/Icons";
 import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: "Contact Us",
   description:
-    "Get in touch with CutesyStudioCo — by email or Instagram, we'd love to hear from you.",
+    "Get in touch with CutesyStudioCo — by email or Instagram, we'd love to hear from you. Questions about custom decoden phone cases or an existing order? We reply fast.",
+  alternates: {
+    canonical: `${SITE.url}/contact`,
+  },
 };
 
 export default function ContactPage() {

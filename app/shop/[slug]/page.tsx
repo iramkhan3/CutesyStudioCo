@@ -3,9 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug } from "@/lib/products";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, SITE } from "@/lib/constants";
 import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
 import { ProductCard } from "@/components/ProductCard";
+import { JsonLd } from "@/components/JsonLd";
 
 export const revalidate = 300;
 
@@ -22,11 +23,24 @@ export async function generateMetadata({
   const product = await getProductBySlug(params.slug);
   if (!product) return {};
 
+  const category = CATEGORIES.find((c) => c.slug === product.category);
+  const title = `${product.name} — Buy Online in India`;
+
   return {
-    title: product.name,
+    title,
     description: product.description,
+    keywords: [
+      product.name,
+      "decoden phone case",
+      "kawaii phone case india",
+      category?.name ?? "",
+      "handmade phone case india",
+    ].filter(Boolean),
+    alternates: {
+      canonical: `${SITE.url}/shop/${product.slug}`,
+    },
     openGraph: {
-      title: product.name,
+      title,
       description: product.description,
       images: [{ url: product.images[0] }],
     },
@@ -49,6 +63,26 @@ export default async function ProductPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          description: product.description,
+          image: product.images.map((img) => `${SITE.url}${img}`),
+          category: category?.name,
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "INR",
+            price: product.price_inr,
+            availability:
+              product.stock_quantity > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+            url: `${SITE.url}/shop/${product.slug}`,
+          },
+        }}
+      />
       <nav className="mb-8 text-sm text-ink/50">
         <Link href="/shop" className="hover:text-pastel">Shop</Link>
         {category && (

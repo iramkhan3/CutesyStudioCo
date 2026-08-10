@@ -6,9 +6,12 @@ import { InstagramIcon, SparkleIcon } from "@/components/Icons";
 import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About Our Handmade Decoden Studio",
   description:
-    "The story behind CutesyStudioCo — a solo handmade decoden studio covering phone cases, jewelry boxes, and more in charms, bows, and swirls of cream, on a mission to bring a little joy to the world.",
+    "The story behind CutesyStudioCo — a solo handmade decoden studio in India covering phone cases, jewelry boxes, and more in charms, bows, and swirls of cream, on a mission to bring a little joy to the world.",
+  alternates: {
+    canonical: `${SITE.url}/about`,
+  },
 };
 
 export default function AboutPage() {

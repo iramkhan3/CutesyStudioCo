@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
 import { DecorativeScatter } from "@/components/Decorative";
 import { CustomCaseBuilder } from "@/components/CustomCaseBuilder";
+import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Custom Phone Case",
+  title: "Custom Decoden Phone Case — Build Your Own",
   description:
-    "Design your own decoden phone case — pick your phone model, theme, style, weight, and colours — or let us surprise you with a one-of-a-kind dream case.",
+    "Design your own custom decoden phone case in India — pick your phone model, theme, style, weight, and colours — or let us surprise you with a one-of-a-kind dream case.",
+  keywords: [
+    "custom phone case india",
+    "custom decoden phone case",
+    "build your own phone case",
+    "personalized kawaii phone case",
+  ],
+  alternates: {
+    canonical: `${SITE.url}/custom`,
+  },
 };
 
 export default function CustomCasePage() {

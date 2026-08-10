@@ -3,15 +3,24 @@ import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { getProductsByCategory } from "@/lib/products";
-import { CATEGORIES, type CategorySlug } from "@/lib/constants";
+import { CATEGORIES, SITE, type CategorySlug } from "@/lib/constants";
 import { WandIcon } from "@/components/Icons";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Shop",
+  title: "Shop Decoden Phone Cases & Kawaii Accessories",
   description:
-    "Browse handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, posters and more — every piece covered in charms, bows, and swirls of cream.",
+    "Shop handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, and posters online in India — every piece covered in charms, bows, and swirls of cream.",
+  keywords: [
+    "decoden phone case india",
+    "kawaii phone case shop",
+    "cute phone case online india",
+    "handmade phone case india",
+  ],
+  alternates: {
+    canonical: `${SITE.url}/shop`,
+  },
 };
 
 export default async function ShopPage({
