@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SITE } from "@/lib/constants";
 import { useCartStore, cartItemCount } from "@/lib/store/cart";
-import { CartIcon, CloseIcon, InstagramIcon, MenuIcon, SparkleIcon } from "@/components/Icons";
+import { CartIcon, CloseIcon, InstagramIcon, MenuIcon } from "@/components/Icons";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -24,9 +25,15 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink/5 bg-cream/90 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-1.5 font-heading text-xl font-semibold text-ink">
-          <SparkleIcon className="h-5 w-5 text-pastel group-hover:animate-wiggle" />
-          {SITE.name}
+        <Link href="/" className="group flex items-center" aria-label={SITE.name}>
+          <Image
+            src="/logo.png"
+            alt={SITE.name}
+            width={44}
+            height={44}
+            className="h-11 w-11 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
+            priority
+          />
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">

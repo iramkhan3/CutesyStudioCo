@@ -1,16 +1,14 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SITE } from "@/lib/constants";
-import { InstagramIcon, MailIcon, SparkleIcon } from "@/components/Icons";
+import { InstagramIcon, MailIcon } from "@/components/Icons";
 
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-ink/5 bg-white">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 md:grid-cols-3 lg:px-8">
         <div>
-          <div className="group flex items-center gap-1.5 font-heading text-lg font-semibold text-ink">
-            <SparkleIcon className="h-4 w-4 text-pastel group-hover:animate-wiggle" />
-            {SITE.name}
-          </div>
+          <Image src="/logo.png" alt={SITE.name} width={56} height={56} className="h-14 w-14" />
           <p className="mt-3 max-w-xs text-sm text-ink/70">
             Handmade decoden pieces, finished with charms, bows, and swirls of
             cream — made to bring a little joy, one at a time.
