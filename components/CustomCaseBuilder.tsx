@@ -227,7 +227,7 @@ export function CustomCaseBuilder() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={4}
-              placeholder="Anything else I should know — reference photos, colors to avoid, a special occasion?"
+              placeholder="vibe, favorite colors, things you love, things to avoid — the more detail you give me, the closer I'll get to your dream. I'll use my best judgment for anything you don't specify."
               className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
             />
           </label>

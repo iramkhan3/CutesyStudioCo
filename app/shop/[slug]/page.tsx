@@ -127,9 +127,9 @@ export default async function ProductPage({
           </div>
 
           <div className="mt-8 rounded-xl2 bg-cream-dark/40 p-4 text-sm text-ink/60">
-            🎀 Handmade to order — please allow 3-5 business days before your
-            piece ships. Every item is one-of-a-kind, so tiny variations in
-            charm placement are part of the charm.
+            🎀 Handmade to order — please allow 7-10 business days before your
+            piece ships. So charm differences depending on availabilities and
+            minor imperfections are part of what makes each piece unique.
           </div>
         </div>
       </div>
