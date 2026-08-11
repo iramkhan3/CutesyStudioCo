@@ -152,7 +152,7 @@ replace with your actual current stock.
 
 A flat coupon system lives in [lib/coupons.ts](lib/coupons.ts) +
 `COUPONS` in [lib/constants.ts](lib/constants.ts). Currently one code:
-**`CUTE30`** — 30% off, minimum ₹500 purchase. The cart page lets customers
+**`CUTEJOY30`** — 30% off, minimum ₹500 purchase. The cart page lets customers
 apply/remove a code and previews the discount; `/api/create-order`
 recomputes the discount server-side from the authoritative subtotal before
 creating the Razorpay order, so the client-side preview is never trusted for
@@ -161,11 +161,14 @@ this to a database table if you need expiry dates or per-customer codes later.
 
 ## TODO: replace with real content before launch
 
-- [ ] **Real product photos** — every product image currently points to a
-      placeholder SVG in `/public/products/*.svg`. Swap the `images` field
-      in your Supabase `products` table (or [lib/data/products.ts](lib/data/products.ts)
-      for local fallback data) with real photo URLs, and update `next.config.mjs`
-      `images.remotePatterns` if hosting them off-Vercel (e.g. Supabase Storage).
+- [x] **Real product photos** — most of the catalog now uses real photos in
+      `/public/products/real/`. Four items still point at a placeholder SVG
+      because no matching photo was available yet: `cloud-nine-tablet-case`,
+      `bow-garden-tablet-stand`, `cotton-candy-makeup-box`, and
+      `dreamy-sky-decoden-poster`. Swap those in
+      [lib/data/products.ts](lib/data/products.ts) (and mirror in
+      [supabase/schema.sql](supabase/schema.sql)) once you have photos for
+      those categories.
 - [ ] **Real logo / favicon** — `app/icon.tsx`, `app/apple-icon.tsx`, and
       `app/opengraph-image.tsx` currently generate placeholder graphics.
       Replace with real logo-based assets once your brand mark is final.
@@ -183,11 +186,18 @@ this to a database table if you need expiry dates or per-customer codes later.
 - [ ] **Rotate Razorpay test keys** — the test key/secret used during
       development should be rotated before going live, and definitely if
       they were ever shared outside a secrets manager.
-- [x] **Shipping cost logic** — flat ₹99 domestic shipping, free above ₹999
-      subtotal. See `lib/shipping.ts` / `SHIPPING_FLAT_RATE_INR` and
-      `FREE_SHIPPING_THRESHOLD_INR` in `lib/constants.ts` — adjust the
-      numbers there, or replace with carrier-calculated rates or
-      international shipping if you need it later.
+- [x] **Shipping cost logic** — flat ₹99 domestic (India) shipping, free
+      above ₹999 subtotal. International orders use a zone-based flat rate
+      keyed on the country selected at checkout (`INTERNATIONAL_SHIPPING_ZONES`
+      in `lib/constants.ts` — ₹799 neighboring countries, ₹1299 Asia-Pacific/
+      Middle East, ₹1999 US/Europe/Oceania, ₹2499 default for anything else).
+      This is a deterministic stand-in, not a live carrier rate — there's no
+      shipping-API account connected. To get real-time international rates
+      (based on exact weight/postal code), sign up with a shipping aggregator
+      (Shiprocket is the common choice for India-based sellers; EasyPost/
+      Shippo are alternatives) and replace the body of `calculateShipping()`
+      in `lib/shipping.ts` with an API call. All the numbers live in
+      `lib/constants.ts` — adjust freely.
 
 ## Project structure
 

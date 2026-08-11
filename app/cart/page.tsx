@@ -203,7 +203,7 @@ export default function CartPage() {
           </div>
         )}
         <div className="flex w-full max-w-xs justify-between text-sm text-ink/60">
-          <span>Shipping</span>
+          <span>Shipping (domestic est.)</span>
           <span>{shippingInr === 0 ? "Free" : `₹${shippingInr.toFixed(2)}`}</span>
         </div>
         <div className="font-heading text-2xl font-bold text-ink">
@@ -211,8 +211,8 @@ export default function CartPage() {
         </div>
         <p className="text-xs text-ink/50">
           {shippingInr === 0
-            ? "You'll be charged in INR at checkout."
-            : `Add ₹${(FREE_SHIPPING_THRESHOLD_INR - subtotalInr).toFixed(2)} more to get free shipping.`}
+            ? "Shipping within India. International rates are calculated at checkout based on your country."
+            : `Add ₹${(FREE_SHIPPING_THRESHOLD_INR - subtotalInr).toFixed(2)} more for free domestic shipping — international rates are calculated at checkout.`}
         </p>
         <Link href="/checkout" className="btn-primary mt-4">
           Proceed to Checkout

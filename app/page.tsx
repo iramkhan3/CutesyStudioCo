@@ -21,6 +21,7 @@ const CAROUSEL_SLIDES = [
   { src: "/marketing/pastel-cases-pair.jpg", alt: "A pair of pastel decoden phone cases side by side" },
   { src: "/marketing/three-cases-lineup.jpg", alt: "Three finished decoden phone cases lined up" },
   { src: "/products/real/charms-in-hand.jpg", alt: "A handful of tiny charms ready to be placed" },
+  { src: "/marketing/festive-pouches-duo.jpg", alt: "A Christmas pouch and a Hello Kitty pouch, handmade" },
 ];
 
 const INSTAGRAM_TEASER_IMAGES = [

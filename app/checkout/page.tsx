@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
-import { SITE } from "@/lib/constants";
+import { COUNTRIES, SITE } from "@/lib/constants";
 import { GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
 declare global {
@@ -48,13 +48,14 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [countrySelect, setCountrySelect] = useState("");
   const [scriptReady, setScriptReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon } = calculateDiscount(subtotalInr, couponCode);
-  const shippingInr = calculateShipping(subtotalInr);
+  const shippingInr = calculateShipping(subtotalInr, form.country);
   const totalInr = Math.max(0, subtotalInr - discount) + shippingInr;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -210,7 +211,37 @@ export default function CheckoutPage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Postal Code" required value={form.postalCode} onChange={(v) => update("postalCode", v)} />
-            <Field label="Country" required value={form.country} onChange={(v) => update("country", v)} />
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink/70">Country</span>
+              <select
+                required
+                value={countrySelect}
+                onChange={(e) => {
+                  setCountrySelect(e.target.value);
+                  update("country", e.target.value === "Other" ? "" : e.target.value);
+                }}
+                className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+              >
+                <option value="" disabled>
+                  Select country
+                </option>
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              {countrySelect === "Other" && (
+                <input
+                  type="text"
+                  required
+                  placeholder="Type your country"
+                  value={form.country}
+                  onChange={(e) => update("country", e.target.value)}
+                  className="mt-2 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+                />
+              )}
+            </label>
           </div>
 
           {error && (
@@ -262,7 +293,7 @@ export default function CheckoutPage() {
               </div>
             )}
             <div className="flex justify-between text-ink/60">
-              <span>Shipping</span>
+              <span>Shipping{form.country && form.country !== "India" ? " (International)" : ""}</span>
               <span>{shippingInr === 0 ? "Free" : `₹${shippingInr.toFixed(2)}`}</span>
             </div>
           </div>

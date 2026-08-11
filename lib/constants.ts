@@ -89,6 +89,62 @@ export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
 export const SHIPPING_FLAT_RATE_INR = 99;
 export const FREE_SHIPPING_THRESHOLD_INR = 999;
 
+// International shipping — zone-based flat rates, since we don't have a live
+// courier API (Shiprocket/DHL/EasyPost etc.) wired up yet. This is a
+// deterministic stand-in based on destination country, collected at checkout.
+// TODO: replace with a real-time carrier rate lookup once you have a
+// shipping-API account — swap the body of calculateShipping() in
+// lib/shipping.ts for an API call keyed on country + postal code + weight.
+export const INTERNATIONAL_SHIPPING_DEFAULT_INR = 2499;
+export const INTERNATIONAL_SHIPPING_ZONES: Record<string, number> = {
+  // Zone 1 — neighboring countries
+  Nepal: 799,
+  Bangladesh: 799,
+  "Sri Lanka": 799,
+  Bhutan: 799,
+  Pakistan: 799,
+  Maldives: 799,
+  // Zone 2 — Asia-Pacific & Middle East
+  "United Arab Emirates": 1299,
+  "Saudi Arabia": 1299,
+  Qatar: 1299,
+  Kuwait: 1299,
+  Oman: 1299,
+  Bahrain: 1299,
+  Singapore: 1299,
+  Malaysia: 1299,
+  Thailand: 1299,
+  Indonesia: 1299,
+  Philippines: 1299,
+  "Hong Kong": 1299,
+  Japan: 1299,
+  "South Korea": 1299,
+  China: 1299,
+  // Zone 3 — North America, Europe, Oceania
+  "United States": 1999,
+  Canada: 1999,
+  "United Kingdom": 1999,
+  Germany: 1999,
+  France: 1999,
+  Italy: 1999,
+  Spain: 1999,
+  Netherlands: 1999,
+  Australia: 1999,
+  "New Zealand": 1999,
+  Ireland: 1999,
+  Sweden: 1999,
+  Switzerland: 1999,
+};
+
+// Country dropdown for checkout — "India" first (the common case), then the
+// countries with an explicit shipping zone above, alphabetically. Anything
+// else falls back to INTERNATIONAL_SHIPPING_DEFAULT_INR.
+export const COUNTRIES = [
+  "India",
+  ...Object.keys(INTERNATIONAL_SHIPPING_ZONES).sort(),
+  "Other",
+] as const;
+
 export const READY_TO_SHIP_PRICE_INR = 1000;
 
 // ============================================================================
@@ -197,7 +253,7 @@ export type Coupon = {
 // TODO: move this to a database table if you ever need more than a couple of
 // always-on codes (seasonal codes, per-customer codes, expiry dates, etc.).
 export const COUPONS: Record<string, Coupon> = {
-  CUTE30: { code: "CUTE30", percentOff: 30, minPurchaseInr: 500 },
+  CUTEJOY30: { code: "CUTEJOY30", percentOff: 30, minPurchaseInr: 500 },
   LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0 },
 };
 
