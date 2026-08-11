@@ -70,10 +70,11 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
           <span className="pill-tag mx-auto">Real Pieces, Real Magic</span>
-          <h2 className="section-heading mt-4">Not renders. Not stock photos.</h2>
+          <h2 className="section-heading mt-4">No renders. No stock photos. Just the real thing.</h2>
           <p className="mt-3 max-w-xl text-ink/70">
-            Every piece below is a real, finished decoden case that left this
-            desk — charms, cream swirls, and all.
+            Every piece below is a genuine, finished decoden case straight
+            from our desk — hand-placed charms, piped cream, and every
+            little detail intact.
           </p>
         </div>
         <div className="mx-auto mt-10 max-w-xl">
