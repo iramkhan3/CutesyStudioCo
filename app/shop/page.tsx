@@ -59,7 +59,7 @@ export default async function ShopPage({
             Don&apos;t see exactly what you want?
           </span>
           <span className="block text-sm text-ink/60">
-            Build your own custom phone case, or let me surprise you →
+            Build a custom phone case, hairbrush, mirror, or keychain, or let me surprise you →
           </span>
         </span>
       </Link>

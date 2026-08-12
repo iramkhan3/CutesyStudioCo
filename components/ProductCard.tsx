@@ -19,11 +19,6 @@ export function ProductCard({ product }: { product: Product }) {
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {product.stock_quantity <= 5 && (
-            <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-pastel shadow-soft">
-              Only {product.stock_quantity} left
-            </span>
-          )}
         </div>
       </Link>
 
@@ -35,6 +30,9 @@ export function ProductCard({ product }: { product: Product }) {
           </h3>
         </Link>
         <div className="mt-1 flex items-baseline gap-1.5">
+          {product.mrp_inr > product.price_inr && (
+            <span className="text-sm text-ink/40 line-through">₹{product.mrp_inr}</span>
+          )}
           <span className="font-heading text-lg font-bold text-ink">₹{product.price_inr}</span>
         </div>
 

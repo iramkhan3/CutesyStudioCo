@@ -2,12 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { EmailSignup } from "@/components/EmailSignup";
+import { CustomCaseBuilder } from "@/components/CustomCaseBuilder";
 import { DecorativeScatter } from "@/components/Decorative";
 import { WaveDivider } from "@/components/WaveDivider";
 import { HomeCarousel } from "@/components/HomeCarousel";
 import { SITE } from "@/lib/constants";
 import { getAllProducts } from "@/lib/products";
-import { InstagramIcon, SparkleIcon } from "@/components/Icons";
+import { InstagramIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
 const CAROUSEL_SLIDES = [
   { src: "/products/real/rainbow-hello-kitty-case.jpg", alt: "Pastel rainbow Hello Kitty decoden phone case" },
@@ -47,23 +48,43 @@ export default async function HomePage() {
       <section className="relative overflow-hidden bg-pastel-hero px-4 py-20 sm:py-28">
         <DecorativeScatter />
         <div className="relative mx-auto max-w-3xl text-center">
-          <span className="pill-tag mx-auto">Handmade in small batches</span>
+          <span className="pill-tag mx-auto">Made just for you</span>
           <h1 className="mt-5 font-heading text-4xl font-bold leading-tight text-ink sm:text-6xl">
-            Bringing joy to the world,
-            <br /> one cute thing at a time
+            Design your dream piece,
+            <br /> made by hand
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink/70 sm:text-lg">
-            {SITE.name} is a one-woman decoden studio — phone cases, jewelry
-            boxes, mirrors and more, hand-covered in charms, bows, and swirls
-            of cream until they&apos;re just the right amount of extra.
+            {SITE.name} is a one-woman decoden studio. Pick your phone case,
+            hairbrush, mirror, or keychain, tell us your vibe, and we&apos;ll
+            hand-cover it in charms, bows, and swirls of cream — one of one,
+            just for you.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/shop" className="btn-primary">
-              <SparkleIcon className="h-4 w-4" /> Shop Now
+            <Link href="/custom" className="btn-primary">
+              <WandIcon className="h-4 w-4" /> Design Your Own
+            </Link>
+            <Link href="/shop" className="btn-secondary">
+              <SparkleIcon className="h-4 w-4" /> Browse Ready to Ship
             </Link>
           </div>
         </div>
         <WaveDivider className="text-cream" />
+      </section>
+
+      {/* Custom builder — the main event */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center">
+          <span className="pill-tag mx-auto">Start Here</span>
+          <h2 className="section-heading mt-4">Build Your Dream Piece</h2>
+          <p className="mt-3 max-w-xl text-ink/70">
+            Phone case, hairbrush, hand mirror, table mirror, or keychain —
+            pick a type, choose every detail yourself, or let us surprise you
+            with something one-of-a-kind.
+          </p>
+        </div>
+        <div className="mt-10">
+          <CustomCaseBuilder />
+        </div>
       </section>
 
       {/* Real pieces showcase */}
@@ -72,9 +93,9 @@ export default async function HomePage() {
           <span className="pill-tag mx-auto">Real Pieces, Real Magic</span>
           <h2 className="section-heading mt-4">No renders. No stock photos. Just the real thing.</h2>
           <p className="mt-3 max-w-xl text-ink/70">
-            Every piece below is a genuine, finished decoden case straight
-            from our desk — hand-placed charms, piped cream, and every
-            little detail intact.
+            A look at what leaves our desk — hand-placed charms, piped
+            cream, and every little detail intact. This is the kind of care
+            that goes into every custom order too.
           </p>
         </div>
         <div className="mx-auto mt-10 max-w-xl">
@@ -110,13 +131,14 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured products */}
+      {/* Ready-to-ship — secondary, no-wait option */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
-          <h2 className="section-heading">Fresh from the craft table</h2>
+          <span className="pill-tag mx-auto">No Wait Required</span>
+          <h2 className="section-heading mt-4">Or Pick One Ready to Ship</h2>
           <p className="mt-3 max-w-xl text-ink/70">
-            A few current favorites — every piece is made to order, so exact
-            charm placement will vary just a little from photo to photo.
+            Don&apos;t want to wait for a custom order? These pieces are
+            already finished and ship in 1-2 days — first come, first served.
           </p>
         </div>
         <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-3">
@@ -126,7 +148,7 @@ export default async function HomePage() {
         </div>
         <div className="mt-10 text-center">
           <Link href="/shop" className="btn-secondary">
-            View Full Shop
+            View All Ready-to-Ship Pieces
           </Link>
         </div>
       </section>

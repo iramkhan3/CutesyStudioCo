@@ -4,12 +4,18 @@ import { getRazorpayClient } from "@/lib/razorpay";
 import { createPendingOrder, attachRazorpayOrderId } from "@/lib/orders";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
-import { CUSTOM_CASE_PRICE_INR, SURPRISE_ME_PRICE_INR } from "@/lib/constants";
+import { CUSTOM_PRODUCT_TYPES } from "@/lib/constants";
 import type { CustomCaseSelection, OrderItemSnapshot, ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Accepts an optional country code (+91, 91, 0) followed by a 10-digit
+// Indian mobile number, or a generic 7-15 digit international number so we
+// don't block legitimate international customers.
+const PHONE_RE = /^(\+?\d{1,3}[\s-]?)?\d{7,12}$/;
+const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
+const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,80}$/u;
 
 type RequestItem =
   | { kind: "product"; productId: string; quantity: number }
@@ -25,17 +31,25 @@ type RequestBody = {
 function isValidCustomization(c: unknown): c is CustomCaseSelection {
   if (!c || typeof c !== "object") return false;
   const custom = c as CustomCaseSelection;
+  const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === custom.productType);
+  if (!type) return false;
+
   if (custom.mode === "surprise") {
-    return typeof custom.note === "string" && custom.note.trim().length >= 20;
+    return (
+      typeof custom.note === "string" &&
+      custom.note.trim().length >= 20 &&
+      custom.note.trim().length <= 500
+    );
   }
   if (custom.mode === "build") {
     return (
-      !!custom.phoneModel?.trim() &&
+      (!type.requiresPhoneModel || !!custom.phoneModel?.trim()) &&
       !!custom.theme?.trim() &&
       !!custom.style?.trim() &&
       !!custom.weight?.trim() &&
       !!custom.colour?.trim() &&
-      typeof custom.note === "string"
+      typeof custom.note === "string" &&
+      custom.note.length <= 500
     );
   }
   return false;
@@ -55,22 +69,25 @@ export async function POST(req: Request) {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
   }
-  if (
-    !customer?.name?.trim() ||
-    !customer?.email?.trim() ||
-    !EMAIL_RE.test(customer.email) ||
-    !customer?.phone?.trim()
-  ) {
-    return NextResponse.json({ error: "Please provide a valid name, email, and phone number." }, { status: 400 });
+  if (!customer?.name?.trim() || !NAME_RE.test(customer.name.trim())) {
+    return NextResponse.json({ error: "Please provide your full name." }, { status: 400 });
+  }
+  if (!customer?.email?.trim() || !EMAIL_RE.test(customer.email.trim())) {
+    return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
+  }
+  if (!customer?.phone?.trim() || !PHONE_RE.test(customer.phone.trim())) {
+    return NextResponse.json({ error: "Please provide a valid phone number." }, { status: 400 });
   }
   if (
     !shippingAddress?.line1?.trim() ||
     !shippingAddress?.city?.trim() ||
     !shippingAddress?.state?.trim() ||
-    !shippingAddress?.postalCode?.trim() ||
     !shippingAddress?.country?.trim()
   ) {
     return NextResponse.json({ error: "Please complete your shipping address." }, { status: 400 });
+  }
+  if (!shippingAddress?.postalCode?.trim() || !POSTAL_CODE_RE.test(shippingAddress.postalCode.trim())) {
+    return NextResponse.json({ error: "Please provide a valid postal code." }, { status: 400 });
   }
   for (const item of items) {
     if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
@@ -111,9 +128,12 @@ export async function POST(req: Request) {
         quantity: item.quantity,
       });
     } else {
-      // Custom case pricing is fixed by mode — never trust a client-sent price.
+      // Custom item pricing is fixed by product type + mode — never trust a
+      // client-sent price. isValidCustomization() above already confirmed
+      // productType matches a known type, so this lookup can't miss.
+      const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === item.customization.productType)!;
       const unitPriceInr =
-        item.customization.mode === "surprise" ? SURPRISE_ME_PRICE_INR : CUSTOM_CASE_PRICE_INR;
+        item.customization.mode === "surprise" ? type.surprise.priceInr : type.build.priceInr;
       orderItems.push({
         kind: "custom",
         name: item.name,

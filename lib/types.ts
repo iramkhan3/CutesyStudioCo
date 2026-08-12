@@ -11,6 +11,7 @@ export type CustomCaseMode = "build" | "surprise";
 
 export type CustomCaseSelection = {
   mode: CustomCaseMode;
+  productType: string;
   phoneModel?: string;
   theme?: string;
   style?: string;

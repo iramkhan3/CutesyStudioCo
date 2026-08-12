@@ -116,6 +116,9 @@ export default async function ProductPage({
             {product.name}
           </h1>
           <div className="mt-3 flex items-baseline gap-2">
+            {product.mrp_inr > product.price_inr && (
+              <span className="text-lg text-ink/40 line-through">₹{product.mrp_inr}</span>
+            )}
             <span className="font-heading text-2xl font-bold text-pastel">
               ₹{product.price_inr}
             </span>

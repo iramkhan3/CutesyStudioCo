@@ -123,41 +123,72 @@ If Supabase or Razorpay aren't configured, `/api/create-order` returns a
 friendly 503 instead of crashing, and the checkout page surfaces that error
 with a note to contact us directly.
 
-## Custom phone case builder (`/custom`)
+## Custom builder (`/custom`) — the site's main focus
 
-Two ways to order a one-of-a-kind case, both added to the cart as a `custom`
-line item (no product row required):
+The homepage and nav lead with this: customers pick a **product type**
+(Phone Case, Hairbrush, Hand Mirror, Table Mirror, or Keychain — see
+`CUSTOM_PRODUCT_TYPES` in [lib/constants.ts](lib/constants.ts)), then one of
+two modes, added to the cart as a `custom` line item (no product row
+required):
 
-- **Build Your Own — ₹1500 flat.** Customer picks phone model (dropdown,
-  [lib/constants.ts](lib/constants.ts) `PHONE_MODELS`, with a "type your own"
-  fallback), theme, style, weight, colour, and an optional note.
-- **Surprise Me — ₹2000 flat.** Customer just writes a detailed note
-  describing their dream case.
+- **Build Your Own.** Customer picks theme, style, weight, and colour (Phone
+  Case also asks for a phone model — dropdown from `PHONE_MODELS`, with a
+  "type your own" fallback), plus an optional note.
+- **Surprise Me.** Customer just writes a detailed note (20-500 characters)
+  describing their dream piece.
 
-Pricing is never trusted from the client — `/api/create-order` re-derives it
-from `CUSTOM_CASE_PRICE_INR` / `SURPRISE_ME_PRICE_INR` based on `mode`, and
-validates that all required customization fields are present before creating
-the order. The full selection (or the surprise note) is stored per-order in
-`orders.items` as JSON so you can see exactly what was requested.
+Every product type has its own MRP + price for each mode — edit them
+directly in `CUSTOM_PRODUCT_TYPES`. Pricing is never trusted from the client —
+`/api/create-order` looks up the price server-side from `productType` +
+`mode`, and validates that all required customization fields are present
+(including that `productType` is a real type) before creating the order. The
+full selection (or the surprise note) is stored per-order in `orders.items`
+as JSON so you can see exactly what was requested.
 
-## Ready-to-ship inventory (`Ready to Ship` category)
+## Ready-to-ship inventory (secondary — `/shop`)
 
-A normal product category (see [lib/constants.ts](lib/constants.ts)
-`CATEGORIES`) for pieces already made and sitting in the studio — flat-priced
-at ₹1000 regardless of design. Seeded with 3 placeholder items in
+The everything-else section: pieces already made and sitting in the studio,
+plus the standard (non-custom) catalog designs. Priced per physical product
+type — see the pricing model below. Seeded in
 [lib/data/products.ts](lib/data/products.ts) / [supabase/schema.sql](supabase/schema.sql);
-replace with your actual current stock.
+keep both in sync as you add/remove stock.
+
+## Pricing model — MRP vs. selling price
+
+Every product has two independent, directly-editable price fields:
+
+- **`mrp_inr`** — the strikethrough "full price" shown on product cards and
+  detail pages.
+- **`price_inr`** — the actual selling price (what customers pay before any
+  coupon), also shown on the card.
+
+They're set per-product with no shared formula — edit either one directly in
+[lib/data/products.ts](lib/data/products.ts) (and Supabase) for a clearance,
+a price bump, whatever the reason. The sitewide `LAUNCH50` coupon (see
+Coupons below) applies **on top of** `price_inr` at checkout, same as it
+always has — the MRP display doesn't change that math.
+
+⚠️ **One-time migration needed:** the `mrp_inr` column was added to
+`supabase/schema.sql` after your Supabase project was already created.
+Re-run the updated [supabase/schema.sql](supabase/schema.sql) in the
+Supabase SQL Editor (it's idempotent — safe to re-run) to add the column and
+sync the new prices. Until you do, the site falls back gracefully (no MRP
+shown, `price_inr` still correct) rather than breaking.
 
 ## Coupons
 
 A flat coupon system lives in [lib/coupons.ts](lib/coupons.ts) +
-`COUPONS` in [lib/constants.ts](lib/constants.ts). Currently one code:
-**`CUTEJOY30`** — 30% off, minimum ₹500 purchase. The cart page lets customers
-apply/remove a code and previews the discount; `/api/create-order`
-recomputes the discount server-side from the authoritative subtotal before
-creating the Razorpay order, so the client-side preview is never trusted for
-the actual charge. Add more codes directly in the `COUPONS` object — move
-this to a database table if you need expiry dates or per-customer codes later.
+`COUPONS` in [lib/constants.ts](lib/constants.ts). Two codes right now:
+**`CUTEJOY30`** (30% off, minimum ₹500 purchase, customer-entered) and
+**`LAUNCH50`** (50% off, no minimum, auto-applied sitewide with no code
+needed as long as `LAUNCH_OFFER_ACTIVE` is `true`). Flip that flag to `false`
+once the launch promo ends — `CUTEJOY30` keeps working either way. The cart
+page lets customers apply/remove a different code and previews the discount;
+`/api/create-order` recomputes the discount server-side from the
+authoritative subtotal before creating the Razorpay order, so the
+client-side preview is never trusted for the actual charge. Add more codes
+directly in the `COUPONS` object — move this to a database table if you need
+expiry dates or per-customer codes later.
 
 ## TODO: replace with real content before launch
 

@@ -145,14 +145,71 @@ export const COUNTRIES = [
   "Other",
 ] as const;
 
-export const READY_TO_SHIP_PRICE_INR = 1000;
-
 // ============================================================================
-// Custom phone case builder
+// Custom builder — the site's main focus. Customers pick a product type,
+// then either "Build Your Own" (pick every detail) or "Surprise Me" (write a
+// note, let the maker decide). Each product type has its own MRP/price for
+// each mode — edit any of these directly for a sale, price change, etc.
 // ============================================================================
 
-export const CUSTOM_CASE_PRICE_INR = 1500;
-export const SURPRISE_ME_PRICE_INR = 2000;
+export type CustomProductTypeSlug =
+  | "phone-case"
+  | "hairbrush"
+  | "hand-mirror"
+  | "table-mirror"
+  | "keychain";
+
+export type CustomProductType = {
+  slug: CustomProductTypeSlug;
+  name: string;
+  requiresPhoneModel: boolean;
+  image: string;
+  build: { mrpInr: number; priceInr: number };
+  surprise: { mrpInr: number; priceInr: number };
+};
+
+export const CUSTOM_PRODUCT_TYPES: CustomProductType[] = [
+  {
+    slug: "phone-case",
+    name: "Phone Case",
+    requiresPhoneModel: true,
+    image: "/products/real/pink-hello-kitty-case.jpg",
+    build: { mrpInr: 1999, priceInr: 1000 },
+    surprise: { mrpInr: 1799, priceInr: 900 },
+  },
+  {
+    slug: "hairbrush",
+    name: "Hairbrush",
+    requiresPhoneModel: false,
+    image: "/products/real/sugar-bow-comb.jpg",
+    build: { mrpInr: 1199, priceInr: 600 },
+    surprise: { mrpInr: 1099, priceInr: 550 },
+  },
+  {
+    slug: "hand-mirror",
+    name: "Hand Mirror",
+    requiresPhoneModel: false,
+    image: "/products/real/bubblegum-bow-mirror-1.jpg",
+    build: { mrpInr: 699, priceInr: 350 },
+    surprise: { mrpInr: 649, priceInr: 325 },
+  },
+  {
+    slug: "table-mirror",
+    name: "Table Mirror",
+    requiresPhoneModel: false,
+    image: "/products/real/bow-heart-mirror.jpg",
+    build: { mrpInr: 699, priceInr: 350 },
+    surprise: { mrpInr: 649, priceInr: 325 },
+  },
+  {
+    slug: "keychain",
+    name: "Keychain",
+    requiresPhoneModel: false,
+    image: "/products/real/sweetheart-keychain-duo.jpg",
+    build: { mrpInr: 599, priceInr: 300 },
+    surprise: { mrpInr: 549, priceInr: 275 },
+  },
+];
 
 // TODO: this is a representative list of phones commonly sold in India, not
 // an exhaustive live catalog — add/remove models here as needed. "Type your
@@ -234,6 +291,8 @@ export const CUSTOM_CASE_WEIGHTS = [
 
 export const CUSTOM_CASE_COLOURS = [
   "Multicolor Pastel",
+  "Pink",
+  "Purple",
   "Black",
   "White",
   "Multicolor Dark",

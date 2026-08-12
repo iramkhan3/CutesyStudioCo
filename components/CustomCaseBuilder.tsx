@@ -5,18 +5,20 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cart";
 import {
   CUSTOM_CASE_COLOURS,
-  CUSTOM_CASE_PRICE_INR,
   CUSTOM_CASE_STYLES,
   CUSTOM_CASE_THEMES,
   CUSTOM_CASE_WEIGHTS,
+  CUSTOM_PRODUCT_TYPES,
   PHONE_MODELS,
-  SURPRISE_ME_PRICE_INR,
+  type CustomProductTypeSlug,
 } from "@/lib/constants";
 import type { CustomCaseMode } from "@/lib/types";
 import { CartIcon, GiftIcon, WandIcon } from "@/components/Icons";
 
 const CUSTOM_TYPE_YOUR_OWN = "Type your own";
 const PHONE_OTHER = "My phone isn't listed (type below)";
+const NOTE_MAX_LENGTH = 500;
+const SURPRISE_NOTE_MIN_LENGTH = 20;
 
 function ChipGroup({
   label,
@@ -56,6 +58,7 @@ export function CustomCaseBuilder() {
   const addItem = useCartStore((s) => s.addItem);
   const router = useRouter();
 
+  const [productType, setProductType] = useState<CustomProductTypeSlug>("phone-case");
   const [mode, setMode] = useState<CustomCaseMode>("build");
   const [phoneModel, setPhoneModel] = useState("");
   const [customPhoneModel, setCustomPhoneModel] = useState("");
@@ -69,7 +72,8 @@ export function CustomCaseBuilder() {
   const [surpriseNote, setSurpriseNote] = useState("");
   const [added, setAdded] = useState(false);
 
-  const price = mode === "build" ? CUSTOM_CASE_PRICE_INR : SURPRISE_ME_PRICE_INR;
+  const typeConfig = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === productType)!;
+  const pricing = mode === "build" ? typeConfig.build : typeConfig.surprise;
 
   const resolvedPhoneModel = phoneModel === PHONE_OTHER ? customPhoneModel.trim() : phoneModel;
   const resolvedTheme = theme === CUSTOM_TYPE_YOUR_OWN ? customTheme.trim() : theme;
@@ -77,13 +81,25 @@ export function CustomCaseBuilder() {
 
   const buildValid =
     mode === "build" &&
-    !!resolvedPhoneModel &&
+    (!typeConfig.requiresPhoneModel || !!resolvedPhoneModel) &&
     !!resolvedTheme &&
     !!style &&
     !!weight &&
     !!resolvedColour;
-  const surpriseValid = mode === "surprise" && surpriseNote.trim().length >= 20;
+  const surpriseNoteTrimmed = surpriseNote.trim();
+  const surpriseValid =
+    mode === "surprise" &&
+    surpriseNoteTrimmed.length >= SURPRISE_NOTE_MIN_LENGTH &&
+    surpriseNoteTrimmed.length <= NOTE_MAX_LENGTH;
   const canAdd = buildValid || surpriseValid;
+
+  function handleProductTypeChange(slug: CustomProductTypeSlug) {
+    setProductType(slug);
+    // Phone model only makes sense for the phone-case type — clear it so a
+    // stale selection can't silently ride along on a different product.
+    setPhoneModel("");
+    setCustomPhoneModel("");
+  }
 
   function handleAddToCart() {
     if (!canAdd) return;
@@ -97,21 +113,22 @@ export function CustomCaseBuilder() {
       {
         kind: "custom",
         id,
-        name: mode === "build" ? "Custom Phone Case" : "Surprise Me Phone Case",
-        image: "/products/phone-cases.svg",
-        priceInr: price,
+        name: `Custom ${typeConfig.name}${mode === "surprise" ? " (Surprise Me)" : ""}`,
+        image: typeConfig.image,
+        priceInr: pricing.priceInr,
         customization:
           mode === "build"
             ? {
                 mode,
-                phoneModel: resolvedPhoneModel,
+                productType,
+                phoneModel: resolvedPhoneModel || undefined,
                 theme: resolvedTheme,
                 style,
                 weight,
                 colour: resolvedColour,
-                note: note.trim(),
+                note: note.trim().slice(0, NOTE_MAX_LENGTH),
               }
-            : { mode, note: surpriseNote.trim() },
+            : { mode, productType, note: surpriseNoteTrimmed },
       },
       1
     );
@@ -127,7 +144,29 @@ export function CustomCaseBuilder() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="card p-5">
+        <span className="mb-3 block font-heading text-sm font-semibold text-ink/70">
+          What are we making?
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {CUSTOM_PRODUCT_TYPES.map((t) => (
+            <button
+              key={t.slug}
+              type="button"
+              onClick={() => handleProductTypeChange(t.slug)}
+              className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-semibold transition-all duration-150 hover:scale-105 ${
+                productType === t.slug
+                  ? "border-pastel bg-pastel text-white"
+                  : "border-ink/10 bg-white text-ink/70 hover:border-pastel/50"
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           onClick={() => setMode("build")}
@@ -140,7 +179,13 @@ export function CustomCaseBuilder() {
           </span>
           <span>
             <span className="block font-heading font-semibold text-ink">Build Your Own</span>
-            <span className="block text-sm text-ink/60">Pick every detail yourself — ₹{CUSTOM_CASE_PRICE_INR}</span>
+            <span className="block text-sm text-ink/60">
+              Pick every detail yourself —{" "}
+              {typeConfig.build.mrpInr > typeConfig.build.priceInr && (
+                <span className="line-through">₹{typeConfig.build.mrpInr}</span>
+              )}{" "}
+              ₹{typeConfig.build.priceInr}
+            </span>
           </span>
         </button>
 
@@ -156,42 +201,51 @@ export function CustomCaseBuilder() {
           </span>
           <span>
             <span className="block font-heading font-semibold text-ink">Surprise Me</span>
-            <span className="block text-sm text-ink/60">Tell me your dream, I&apos;ll design it — ₹{SURPRISE_ME_PRICE_INR}</span>
+            <span className="block text-sm text-ink/60">
+              Tell me your dream, I&apos;ll design it —{" "}
+              {typeConfig.surprise.mrpInr > typeConfig.surprise.priceInr && (
+                <span className="line-through">₹{typeConfig.surprise.mrpInr}</span>
+              )}{" "}
+              ₹{typeConfig.surprise.priceInr}
+            </span>
           </span>
         </button>
       </div>
 
       {mode === "build" ? (
         <div className="card mt-6 flex flex-col gap-6 p-6">
-          <label className="block">
-            <span className="mb-2 block font-heading text-sm font-semibold text-ink/70">
-              Phone Model
-            </span>
-            <select
-              value={phoneModel}
-              onChange={(e) => setPhoneModel(e.target.value)}
-              className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2.5 text-sm text-ink focus:border-pastel focus:outline-none"
-            >
-              <option value="" disabled>
-                Select your phone model
-              </option>
-              {PHONE_MODELS.map((model) => (
-                <option key={model} value={model}>
-                  {model}
+          {typeConfig.requiresPhoneModel && (
+            <label className="block">
+              <span className="mb-2 block font-heading text-sm font-semibold text-ink/70">
+                Phone Model
+              </span>
+              <select
+                value={phoneModel}
+                onChange={(e) => setPhoneModel(e.target.value)}
+                className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2.5 text-sm text-ink focus:border-pastel focus:outline-none"
+              >
+                <option value="" disabled>
+                  Select your phone model
                 </option>
-              ))}
-            </select>
-            {phoneModel === PHONE_OTHER && (
-              <input
-                type="text"
-                required
-                value={customPhoneModel}
-                onChange={(e) => setCustomPhoneModel(e.target.value)}
-                placeholder="Type your phone model"
-                className="mt-2 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
-              />
-            )}
-          </label>
+                {PHONE_MODELS.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              {phoneModel === PHONE_OTHER && (
+                <input
+                  type="text"
+                  required
+                  value={customPhoneModel}
+                  onChange={(e) => setCustomPhoneModel(e.target.value)}
+                  placeholder="Type your phone model"
+                  maxLength={80}
+                  className="mt-2 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+                />
+              )}
+            </label>
+          )}
 
           <ChipGroup label="Theme" options={CUSTOM_CASE_THEMES} value={theme} onChange={setTheme} />
           {theme === CUSTOM_TYPE_YOUR_OWN && (
@@ -201,6 +255,7 @@ export function CustomCaseBuilder() {
               value={customTheme}
               onChange={(e) => setCustomTheme(e.target.value)}
               placeholder="Describe your theme"
+              maxLength={80}
               className="-mt-3 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
             />
           )}
@@ -215,6 +270,7 @@ export function CustomCaseBuilder() {
               value={customColour}
               onChange={(e) => setCustomColour(e.target.value)}
               placeholder="Describe your colours"
+              maxLength={80}
               className="-mt-3 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
             />
           )}
@@ -225,45 +281,64 @@ export function CustomCaseBuilder() {
             </span>
             <textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX_LENGTH))}
               rows={4}
+              maxLength={NOTE_MAX_LENGTH}
               placeholder="vibe, favorite colors, things you love, things to avoid — the more detail you give me, the closer I'll get to your dream. I'll use my best judgment for anything you don't specify."
               className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
             />
+            <span className="mt-1 block text-right text-xs text-ink/40">
+              {note.length}/{NOTE_MAX_LENGTH}
+            </span>
           </label>
         </div>
       ) : (
         <div className="card mt-6 flex flex-col gap-4 p-6">
           <label className="block">
             <span className="mb-2 block font-heading text-sm font-semibold text-ink/70">
-              Tell me your dream case
+              Tell me your dream {typeConfig.name.toLowerCase()}
             </span>
             <p className="mb-2 text-sm text-ink/60">
-              Phone model, vibe, favorite colors, characters you love, things
-              to avoid — the more detail you give me, the closer I&apos;ll get to
-              your dream. I&apos;ll use my best judgment for anything you don&apos;t
+              {typeConfig.requiresPhoneModel ? "Phone model, vibe" : "Vibe"}, favorite colors,
+              characters you love, things to avoid — the more detail you give me, the closer
+              I&apos;ll get to your dream. I&apos;ll use my best judgment for anything you don&apos;t
               specify.
             </p>
             <textarea
               value={surpriseNote}
-              onChange={(e) => setSurpriseNote(e.target.value)}
+              onChange={(e) => setSurpriseNote(e.target.value.slice(0, NOTE_MAX_LENGTH))}
               rows={7}
               required
-              placeholder="e.g. iPhone 15, obsessed with Cinnamoroll and baby blue, love bows, please no glitter texture, it's a birthday gift for myself!"
+              maxLength={NOTE_MAX_LENGTH}
+              placeholder={
+                typeConfig.requiresPhoneModel
+                  ? "e.g. iPhone 15, obsessed with Cinnamoroll and baby blue, love bows, please no glitter texture, it's a birthday gift for myself!"
+                  : "e.g. obsessed with Cinnamoroll and baby blue, love bows and pearls, please no glitter texture, it's a birthday gift for myself!"
+              }
               className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
             />
-            {!surpriseValid && surpriseNote.length > 0 && (
-              <p className="mt-1 text-xs text-pastel-dark">
-                A few more details would help — at least 20 characters.
-              </p>
-            )}
+            <div className="mt-1 flex items-center justify-between">
+              {!surpriseValid && surpriseNoteTrimmed.length > 0 ? (
+                <p className="text-xs text-pastel-dark">
+                  A few more details would help — at least {SURPRISE_NOTE_MIN_LENGTH} characters.
+                </p>
+              ) : (
+                <span />
+              )}
+              <span className="text-xs text-ink/40">
+                {surpriseNote.length}/{NOTE_MAX_LENGTH}
+              </span>
+            </div>
           </label>
         </div>
       )}
 
       <div className="card mt-6 flex flex-col items-center gap-4 p-6 text-center">
-        <div>
-          <span className="font-heading text-2xl font-bold text-ink">₹{price}</span>
+        <div className="flex items-baseline gap-2">
+          {pricing.mrpInr > pricing.priceInr && (
+            <span className="font-heading text-lg text-ink/40 line-through">₹{pricing.mrpInr}</span>
+          )}
+          <span className="font-heading text-2xl font-bold text-ink">₹{pricing.priceInr}</span>
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           <button
@@ -284,8 +359,10 @@ export function CustomCaseBuilder() {
         {!canAdd && (
           <p className="text-xs text-ink/50">
             {mode === "build"
-              ? "Pick a phone model, theme, style, weight, and colour to continue."
-              : "Write a little more about your dream case to continue."}
+              ? typeConfig.requiresPhoneModel
+                ? "Pick a phone model, theme, style, weight, and colour to continue."
+                : "Pick a theme, style, weight, and colour to continue."
+              : `Write a little more about your dream ${typeConfig.name.toLowerCase()} to continue.`}
           </p>
         )}
       </div>

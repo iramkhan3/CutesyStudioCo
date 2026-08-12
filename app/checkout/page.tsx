@@ -41,6 +41,44 @@ const EMPTY_FORM: FormState = {
   country: "",
 };
 
+const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,80}$/u;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^(\+?\d{1,3}[\s-]?)?\d{7,12}$/;
+const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
+
+function validateField(key: keyof FormState, value: string): string | null {
+  switch (key) {
+    case "name":
+      return NAME_RE.test(value.trim()) ? null : "Enter your full name.";
+    case "email":
+      return EMAIL_RE.test(value.trim()) ? null : "Enter a valid email address.";
+    case "phone":
+      return PHONE_RE.test(value.trim()) ? null : "Enter a valid phone number.";
+    case "postalCode":
+      return POSTAL_CODE_RE.test(value.trim()) ? null : "Enter a valid postal code.";
+    case "line1":
+      return value.trim().length >= 4 ? null : "Enter your street address.";
+    case "city":
+      return value.trim().length >= 2 ? null : "Enter your city.";
+    case "state":
+      return value.trim().length >= 2 ? null : "Enter your state or province.";
+    case "country":
+      return value.trim() ? null : "Select your country.";
+    default:
+      return null;
+  }
+}
+
+function validateForm(form: FormState): Partial<Record<keyof FormState, string>> {
+  const errors: Partial<Record<keyof FormState, string>> = {};
+  (Object.keys(form) as (keyof FormState)[]).forEach((key) => {
+    if (key === "line2") return;
+    const message = validateField(key, form[key]);
+    if (message) errors[key] = message;
+  });
+  return errors;
+}
+
 export default function CheckoutPage() {
   const items = useCartStore((s) => s.items);
   const couponCode = useCartStore((s) => s.couponCode);
@@ -49,9 +87,17 @@ export default function CheckoutPage() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [countrySelect, setCountrySelect] = useState("");
+  const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
   const [scriptReady, setScriptReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fieldErrors = validateForm(form);
+  const hasErrors = Object.keys(fieldErrors).length > 0;
+
+  function markTouched(key: keyof FormState) {
+    setTouched((t) => ({ ...t, [key]: true }));
+  }
 
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon } = calculateDiscount(subtotalInr, couponCode);
@@ -66,6 +112,20 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError(null);
 
+    if (hasErrors) {
+      setTouched({
+        name: true,
+        email: true,
+        phone: true,
+        line1: true,
+        city: true,
+        state: true,
+        postalCode: true,
+        country: true,
+      });
+      setError("Please fix the highlighted fields before continuing.");
+      return;
+    }
     if (!scriptReady) {
       setError("Payment is still loading — please try again in a second.");
       return;
@@ -198,19 +258,69 @@ export default function CheckoutPage() {
           <h2 className="font-heading text-lg font-semibold text-ink">Shipping Details</h2>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Full Name" required value={form.name} onChange={(v) => update("name", v)} />
-            <Field label="Email" type="email" required value={form.email} onChange={(v) => update("email", v)} />
+            <Field
+              label="Full Name"
+              required
+              value={form.name}
+              onChange={(v) => update("name", v)}
+              onBlur={() => markTouched("name")}
+              error={touched.name ? fieldErrors.name : undefined}
+            />
+            <Field
+              label="Email"
+              type="email"
+              required
+              value={form.email}
+              onChange={(v) => update("email", v)}
+              onBlur={() => markTouched("email")}
+              error={touched.email ? fieldErrors.email : undefined}
+            />
           </div>
-          <Field label="Phone" required value={form.phone} onChange={(v) => update("phone", v)} />
-          <Field label="Address Line 1" required value={form.line1} onChange={(v) => update("line1", v)} />
+          <Field
+            label="Phone"
+            required
+            value={form.phone}
+            onChange={(v) => update("phone", v)}
+            onBlur={() => markTouched("phone")}
+            error={touched.phone ? fieldErrors.phone : undefined}
+          />
+          <Field
+            label="Address Line 1"
+            required
+            value={form.line1}
+            onChange={(v) => update("line1", v)}
+            onBlur={() => markTouched("line1")}
+            error={touched.line1 ? fieldErrors.line1 : undefined}
+          />
           <Field label="Address Line 2 (optional)" value={form.line2} onChange={(v) => update("line2", v)} />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="City" required value={form.city} onChange={(v) => update("city", v)} />
-            <Field label="State / Province" required value={form.state} onChange={(v) => update("state", v)} />
+            <Field
+              label="City"
+              required
+              value={form.city}
+              onChange={(v) => update("city", v)}
+              onBlur={() => markTouched("city")}
+              error={touched.city ? fieldErrors.city : undefined}
+            />
+            <Field
+              label="State / Province"
+              required
+              value={form.state}
+              onChange={(v) => update("state", v)}
+              onBlur={() => markTouched("state")}
+              error={touched.state ? fieldErrors.state : undefined}
+            />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Postal Code" required value={form.postalCode} onChange={(v) => update("postalCode", v)} />
+            <Field
+              label="Postal Code"
+              required
+              value={form.postalCode}
+              onChange={(v) => update("postalCode", v)}
+              onBlur={() => markTouched("postalCode")}
+              error={touched.postalCode ? fieldErrors.postalCode : undefined}
+            />
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-ink/70">Country</span>
               <select
@@ -220,6 +330,7 @@ export default function CheckoutPage() {
                   setCountrySelect(e.target.value);
                   update("country", e.target.value === "Other" ? "" : e.target.value);
                 }}
+                onBlur={() => markTouched("country")}
                 className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
               >
                 <option value="" disabled>
@@ -238,8 +349,12 @@ export default function CheckoutPage() {
                   placeholder="Type your country"
                   value={form.country}
                   onChange={(e) => update("country", e.target.value)}
+                  onBlur={() => markTouched("country")}
                   className="mt-2 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
                 />
+              )}
+              {touched.country && fieldErrors.country && (
+                <p className="mt-1 text-xs text-pastel-dark">{fieldErrors.country}</p>
               )}
             </label>
           </div>
@@ -311,14 +426,18 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
   type = "text",
   required = false,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   type?: string;
   required?: boolean;
+  error?: string;
 }) {
   return (
     <label className="block">
@@ -328,8 +447,13 @@ function Field({
         required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+        onBlur={onBlur}
+        aria-invalid={!!error}
+        className={`w-full rounded-xl2 border-2 bg-white px-3 py-2 text-sm text-ink focus:outline-none ${
+          error ? "border-pastel-dark" : "border-ink/10 focus:border-pastel"
+        }`}
       />
+      {error && <p className="mt-1 text-xs text-pastel-dark">{error}</p>}
     </label>
   );
 }

@@ -20,9 +20,9 @@ const nunito = Nunito({
   display: "swap",
 });
 
-const TITLE = `${SITE.name} — Decoden Phone Cases & Kawaii Accessories in India`;
+const TITLE = `${SITE.name} — Custom Decoden Phone Cases & Kawaii Accessories in India`;
 const DESCRIPTION =
-  "Handmade decoden phone cases, custom cases, jewelry boxes, mirrors, and keychains — cream-topped, charm-covered, and made to order in India. Shop ready-made pieces or build your own.";
+  "Design your own custom decoden phone case, hairbrush, mirror, or keychain — cream-topped, charm-covered, and made by hand in India. Or pick one already finished and ready to ship.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -32,12 +32,17 @@ export const metadata: Metadata = {
   },
   description: DESCRIPTION,
   keywords: [
+    "custom decoden phone case india",
+    "build your own phone case india",
     "decoden phone case",
     "decoden phone case india",
     "kawaii phone case",
     "custom phone case india",
     "cute phone case online india",
     "handmade phone case india",
+    "custom decoden hairbrush",
+    "custom decoden mirror",
+    "custom decoden keychain",
     "sanrio phone case",
     "hello kitty phone case",
     "charm phone case",

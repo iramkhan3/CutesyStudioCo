@@ -10,8 +10,9 @@ import { CartIcon, CloseIcon, InstagramIcon, MenuIcon } from "@/components/Icons
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop" },
-  { href: "/custom", label: "Custom Case" },
+  { href: "/custom", label: "Customize" },
+  { href: "/shop", label: "Ready to Ship" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
