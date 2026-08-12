@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug } from "@/lib/products";
 import { CATEGORIES, SITE } from "@/lib/constants";
+import { discountPercent } from "@/lib/pricing";
 import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
@@ -56,6 +57,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const category = CATEGORIES.find((c) => c.slug === product.category);
+  const percentOff = discountPercent(product.mrp_inr, product.price_inr);
   const allProducts = await getAllProducts();
   const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
@@ -115,13 +117,18 @@ export default async function ProductPage({
           <h1 className="mt-3 font-heading text-3xl font-bold text-ink sm:text-4xl">
             {product.name}
           </h1>
-          <div className="mt-3 flex items-baseline gap-2">
-            {product.mrp_inr > product.price_inr && (
+          <div className="mt-3 flex flex-wrap items-baseline gap-2">
+            {percentOff > 0 && (
               <span className="text-lg text-ink/40 line-through">₹{product.mrp_inr}</span>
             )}
             <span className="font-heading text-2xl font-bold text-pastel">
               ₹{product.price_inr}
             </span>
+            {percentOff > 0 && (
+              <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">
+                {percentOff}% OFF
+              </span>
+            )}
           </div>
           <p className="mt-5 text-ink/70">{product.description}</p>
 

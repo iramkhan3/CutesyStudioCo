@@ -12,6 +12,7 @@ import {
   PHONE_MODELS,
   type CustomProductTypeSlug,
 } from "@/lib/constants";
+import { discountPercent } from "@/lib/pricing";
 import type { CustomCaseMode } from "@/lib/types";
 import { CartIcon, GiftIcon, WandIcon } from "@/components/Icons";
 
@@ -74,6 +75,9 @@ export function CustomCaseBuilder() {
 
   const typeConfig = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === productType)!;
   const pricing = mode === "build" ? typeConfig.build : typeConfig.surprise;
+  const buildPercentOff = discountPercent(typeConfig.build.mrpInr, typeConfig.build.priceInr);
+  const surprisePercentOff = discountPercent(typeConfig.surprise.mrpInr, typeConfig.surprise.priceInr);
+  const pricingPercentOff = mode === "build" ? buildPercentOff : surprisePercentOff;
 
   const resolvedPhoneModel = phoneModel === PHONE_OTHER ? customPhoneModel.trim() : phoneModel;
   const resolvedTheme = theme === CUSTOM_TYPE_YOUR_OWN ? customTheme.trim() : theme;
@@ -181,10 +185,15 @@ export function CustomCaseBuilder() {
             <span className="block font-heading font-semibold text-ink">Build Your Own</span>
             <span className="block text-sm text-ink/60">
               Pick every detail yourself —{" "}
-              {typeConfig.build.mrpInr > typeConfig.build.priceInr && (
+              {buildPercentOff > 0 && (
                 <span className="line-through">₹{typeConfig.build.mrpInr}</span>
               )}{" "}
               ₹{typeConfig.build.priceInr}
+              {buildPercentOff > 0 && (
+                <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
+                  {buildPercentOff}% OFF
+                </span>
+              )}
             </span>
           </span>
         </button>
@@ -203,10 +212,15 @@ export function CustomCaseBuilder() {
             <span className="block font-heading font-semibold text-ink">Surprise Me</span>
             <span className="block text-sm text-ink/60">
               Tell me your dream, I&apos;ll design it —{" "}
-              {typeConfig.surprise.mrpInr > typeConfig.surprise.priceInr && (
+              {surprisePercentOff > 0 && (
                 <span className="line-through">₹{typeConfig.surprise.mrpInr}</span>
               )}{" "}
               ₹{typeConfig.surprise.priceInr}
+              {surprisePercentOff > 0 && (
+                <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
+                  {surprisePercentOff}% OFF
+                </span>
+              )}
             </span>
           </span>
         </button>
@@ -334,11 +348,16 @@ export function CustomCaseBuilder() {
       )}
 
       <div className="card mt-6 flex flex-col items-center gap-4 p-6 text-center">
-        <div className="flex items-baseline gap-2">
-          {pricing.mrpInr > pricing.priceInr && (
+        <div className="flex flex-wrap items-baseline justify-center gap-2">
+          {pricingPercentOff > 0 && (
             <span className="font-heading text-lg text-ink/40 line-through">₹{pricing.mrpInr}</span>
           )}
           <span className="font-heading text-2xl font-bold text-ink">₹{pricing.priceInr}</span>
+          {pricingPercentOff > 0 && (
+            <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">
+              {pricingPercentOff}% OFF
+            </span>
+          )}
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           <button
