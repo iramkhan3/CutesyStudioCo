@@ -86,7 +86,7 @@ export default function AboutPage() {
               bringing joy to the world, one cute thing at a time.
             </p>
             <p className="mt-4 text-ink/70">
-              Most days I&apos;m just an overwhelmed girl running on chai and
+              Most days I&apos;m just an overwhelmed girl running on coffee and
               deadlines like everyone else — but the second I sit down with
               a tray of tiny charms and a swirl of decoden cream, my brain
               finally goes quiet. This studio is where I come to breathe,
