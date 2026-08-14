@@ -22,8 +22,9 @@ export default function CartPage() {
 
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode);
-  const shippingInr = calculateShipping(subtotalInr);
-  const totalInr = Math.max(0, subtotalInr - discount) + shippingInr;
+  const payableInr = Math.max(0, subtotalInr - discount);
+  const shippingInr = calculateShipping(payableInr);
+  const totalInr = payableInr + shippingInr;
 
   function handleApplyCoupon() {
     if (!couponInput.trim()) return;
@@ -212,7 +213,7 @@ export default function CartPage() {
         <p className="text-xs text-ink/50">
           {shippingInr === 0
             ? "Shipping within India. International rates are calculated at checkout based on your country."
-            : `Add ₹${(FREE_SHIPPING_THRESHOLD_INR - subtotalInr).toFixed(2)} more for free domestic shipping — international rates are calculated at checkout.`}
+            : `Add ₹${(FREE_SHIPPING_THRESHOLD_INR - payableInr).toFixed(2)} more for free domestic shipping — international rates are calculated at checkout.`}
         </p>
         <Link href="/checkout" className="btn-primary mt-4">
           Proceed to Checkout

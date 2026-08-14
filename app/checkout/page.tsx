@@ -101,8 +101,9 @@ export default function CheckoutPage() {
 
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon } = calculateDiscount(subtotalInr, couponCode);
-  const shippingInr = calculateShipping(subtotalInr, form.country);
-  const totalInr = Math.max(0, subtotalInr - discount) + shippingInr;
+  const payableInr = Math.max(0, subtotalInr - discount);
+  const shippingInr = calculateShipping(payableInr, form.country);
+  const totalInr = payableInr + shippingInr;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));

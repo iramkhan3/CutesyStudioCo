@@ -153,8 +153,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
   }
 
-  const shippingAmount = calculateShipping(subtotal, shippingAddress.country);
-  const totalAmount = subtotal - discount + shippingAmount;
+  const payableAmount = Math.max(0, subtotal - discount);
+  const shippingAmount = calculateShipping(payableAmount, shippingAddress.country);
+  const totalAmount = payableAmount + shippingAmount;
 
   const amountInPaise = Math.round(totalAmount * 100);
   if (amountInPaise < 100) {

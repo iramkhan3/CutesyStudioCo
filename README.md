@@ -218,7 +218,10 @@ expiry dates or per-customer codes later.
       development should be rotated before going live, and definitely if
       they were ever shared outside a secrets manager.
 - [x] **Shipping cost logic** — flat ₹99 domestic (India) shipping, free
-      above ₹999 subtotal. International orders use a zone-based flat rate
+      above ₹999 of what the customer is actually paying (subtotal minus
+      any coupon/launch discount — not the raw pre-discount subtotal, so a
+      heavily-discounted small order doesn't get free shipping it wouldn't
+      otherwise qualify for). International orders use a zone-based flat rate
       keyed on the country selected at checkout (`INTERNATIONAL_SHIPPING_ZONES`
       in `lib/constants.ts` — ₹799 neighboring countries, ₹1299 Asia-Pacific/
       Middle East, ₹1999 US/Europe/Oceania, ₹2499 default for anything else).
