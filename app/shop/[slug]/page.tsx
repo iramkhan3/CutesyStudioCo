@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug } from "@/lib/products";
 import { CATEGORIES, SITE } from "@/lib/constants";
-import { discountPercent } from "@/lib/pricing";
+import { getDisplayPricing } from "@/lib/pricing";
 import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductGallery } from "@/components/ProductGallery";
 import { JsonLd } from "@/components/JsonLd";
 
 export const revalidate = 300;
@@ -57,7 +57,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const category = CATEGORIES.find((c) => c.slug === product.category);
-  const percentOff = discountPercent(product.mrp_inr, product.price_inr);
+  const { mrpInr, effectivePriceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
   const allProducts = await getAllProducts();
   const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
@@ -76,7 +76,7 @@ export default async function ProductPage({
           offers: {
             "@type": "Offer",
             priceCurrency: "INR",
-            price: product.price_inr,
+            price: effectivePriceInr,
             availability:
               product.stock_quantity > 0
                 ? "https://schema.org/InStock"
@@ -100,17 +100,7 @@ export default async function ProductPage({
       </nav>
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-        <div className="relative aspect-square overflow-hidden rounded-xl3 bg-blush-light shadow-soft">
-          {/* TODO: swap this placeholder SVG for real product photography */}
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            sizes="(min-width: 768px) 50vw, 100vw"
-            className="object-cover"
-            priority
-          />
-        </div>
+        <ProductGallery images={product.images} alt={product.name} />
 
         <div>
           {category && <span className="pill-tag">{category.name}</span>}
@@ -118,11 +108,9 @@ export default async function ProductPage({
             {product.name}
           </h1>
           <div className="mt-3 flex flex-wrap items-baseline gap-2">
-            {percentOff > 0 && (
-              <span className="text-lg text-ink/40 line-through">₹{product.mrp_inr}</span>
-            )}
+            {percentOff > 0 && <span className="text-lg text-ink/40 line-through">₹{mrpInr}</span>}
             <span className="font-heading text-2xl font-bold text-pastel">
-              ₹{product.price_inr}
+              ₹{effectivePriceInr}
             </span>
             {percentOff > 0 && (
               <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">

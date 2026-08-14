@@ -9,13 +9,24 @@ export const SITE = {
   email: "hello.cutesystudioco@gmail.com",
 } as const;
 
+// Shown wherever a customer is about to order (or has ordered) a made-to-order
+// custom piece — the /custom page, the builder itself, cart, and checkout.
+export const CUSTOM_ORDER_TIMELINE_NOTE =
+  "Customized handmade items take longer to make, as each order is unique. Please expect 7-10 days to ship your order. Delivery time after that depends on the external courier service provider — we'll share all tracking details with you.";
+
+// Approximate, static reference rate for showing a USD equivalent to
+// international customers at checkout — NOT a live FX rate, and never used
+// for the actual charge (Razorpay always charges in INR, per SITE currency
+// policy). Update occasionally; a few % of drift is fine for a reference.
+export const USD_INR_RATE = 83;
+
 export const CATEGORIES = [
   {
     slug: "phone-cases",
     name: "Phone Cases",
     tagline: "Pocket-sized charm overload",
     description:
-      "Every case starts life as a plain shell before it's covered in piped cream, bows, and tiny charms. Built to protect your phone and steal the show at the same time.",
+      "Every case starts life as a plain shell before it's covered in piped decoden cream and tiny cute charms. Built to protect your phone and steal the show at the same time.",
   },
   {
     slug: "tablet-cases",
@@ -36,7 +47,7 @@ export const CATEGORIES = [
     name: "Jewelry Boxes",
     tagline: "Tiny treasure chests, very extra",
     description:
-      "Mirrored lids, velvet-soft interiors, and lids piled high with bows and tiny charms — a proper home for your favorite rings and earrings.",
+      "Mirrored lids, velvet-soft interiors, and lids piled high with cute charms and swirls of decoden cream — a proper home for your favorite rings and earrings.",
   },
   {
     slug: "makeup-boxes",
@@ -57,14 +68,14 @@ export const CATEGORIES = [
     name: "Mirrors",
     tagline: "Compact mirrors worth showing off",
     description:
-      "Pop them open for a touch-up, or just leave them on your desk — either way, these mirrors are dripping in bows and sweet little charms.",
+      "Pop them open for a touch-up, or just leave them on your desk — either way, these mirrors are dripping in decoden cream and sweet little charms.",
   },
   {
     slug: "keychains",
     name: "Keychains",
     tagline: "Bag charms with big personality",
     description:
-      "Little clusters of charms, cream swirls, and bows on a sturdy clasp — the easiest way to decoden-ify your keys, bag, or backpack.",
+      "Little clusters of cute charms and cream swirls on a sturdy clasp — the easiest way to decoden-ify your keys, bag, or backpack.",
   },
   {
     slug: "posters",
@@ -78,7 +89,7 @@ export const CATEGORIES = [
     name: "Ready to Ship",
     tagline: "Already made, ready to fly to you",
     description:
-      "Pieces already finished and sitting in the studio — no made-to-order wait, ships in 1-2 days. Every ready-to-ship piece is flat-priced at ₹1000.",
+      "Pieces already finished and sitting in the studio — no made-to-order wait, ships in 1-2 days.",
   },
 ] as const;
 

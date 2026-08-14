@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 export const metadata: Metadata = {
   title: "About Our Handmade Decoden Studio",
   description:
-    "The story behind CutesyStudioCo — a solo handmade decoden studio in India covering phone cases, jewelry boxes, and more in charms, bows, and swirls of cream, on a mission to bring a little joy to the world.",
+    "The story behind CutesyStudioCo — a solo handmade decoden studio in India covering phone cases, jewelry boxes, and more in cute charms and satisfying swirls of decoden cream, on a mission to bring a little joy to the world.",
   alternates: {
     canonical: `${SITE.url}/about`,
   },
@@ -88,10 +88,10 @@ export default function AboutPage() {
             <p className="mt-4 text-ink/70">
               Most days I&apos;m just an overwhelmed girl running on chai and
               deadlines like everyone else — but the second I sit down with
-              a glue gun and a tray of tiny charms, my brain finally goes
-              quiet. This studio is where I come to breathe, one bow and one
-              bead at a time. Thank you for being here — it genuinely means
-              a lot.
+              a tray of tiny charms and a swirl of decoden cream, my brain
+              finally goes quiet. This studio is where I come to breathe,
+              one charm at a time. Thank you for being here — it genuinely
+              means a lot.
             </p>
             <a
               href={SITE.instagramUrl}

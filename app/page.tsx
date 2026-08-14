@@ -56,8 +56,8 @@ export default async function HomePage() {
           <p className="mx-auto mt-5 max-w-xl text-base text-ink/70 sm:text-lg">
             {SITE.name} is a one-woman decoden studio. Pick your phone case,
             hairbrush, mirror, or keychain, tell us your vibe, and we&apos;ll
-            hand-cover it in charms, bows, and swirls of cream — one of one,
-            just for you.
+            hand-cover it in cute charms and swirls of satisfying decoden
+            cream — one of one, just for you.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/custom" className="btn-primary">

@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
-import { COUNTRIES, SITE } from "@/lib/constants";
+import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, SITE } from "@/lib/constants";
+import { formatUsdApprox } from "@/lib/pricing";
 import { GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
 declare global {
@@ -104,6 +105,8 @@ export default function CheckoutPage() {
   const payableInr = Math.max(0, subtotalInr - discount);
   const shippingInr = calculateShipping(payableInr, form.country);
   const totalInr = payableInr + shippingInr;
+  const hasCustomItem = items.some((i) => i.kind === "custom");
+  const isInternational = !!form.country && form.country !== "India";
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -254,6 +257,13 @@ export default function CheckoutPage() {
 
       <h1 className="font-heading text-3xl font-bold text-ink sm:text-4xl">Checkout</h1>
 
+      {hasCustomItem && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
+          <span className="text-lg leading-none">🎀</span>
+          <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr]">
         <form onSubmit={handleSubmit} className="card space-y-5 p-6">
           <h2 className="font-heading text-lg font-semibold text-ink">Shipping Details</h2>
@@ -391,8 +401,13 @@ export default function CheckoutPage() {
                   <div className="font-heading font-semibold text-ink">{item.name}</div>
                   <div className="text-ink/50">Qty {item.quantity}</div>
                 </div>
-                <div className="text-sm font-semibold text-ink">
-                  ₹{(item.priceInr * item.quantity).toFixed(2)}
+                <div className="text-right text-sm font-semibold text-ink">
+                  <div>₹{(item.priceInr * item.quantity).toFixed(2)}</div>
+                  {isInternational && (
+                    <div className="text-xs font-normal text-ink/40">
+                      {formatUsdApprox(item.priceInr * item.quantity)}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -400,23 +415,54 @@ export default function CheckoutPage() {
           <div className="mt-6 space-y-1 border-t border-ink/10 pt-4 text-sm">
             <div className="flex justify-between text-ink/60">
               <span>Subtotal</span>
-              <span>₹{subtotalInr.toFixed(2)}</span>
+              <span>
+                ₹{subtotalInr.toFixed(2)}
+                {isInternational && (
+                  <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(subtotalInr)}</span>
+                )}
+              </span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-pastel-dark">
                 <span>Discount ({coupon?.code === "LAUNCH50" ? "Launch Offer" : coupon?.code})</span>
-                <span>-₹{discount.toFixed(2)}</span>
+                <span>
+                  -₹{discount.toFixed(2)}
+                  {isInternational && (
+                    <span className="ml-1 text-xs text-pastel-dark/60">{formatUsdApprox(discount)}</span>
+                  )}
+                </span>
               </div>
             )}
             <div className="flex justify-between text-ink/60">
-              <span>Shipping{form.country && form.country !== "India" ? " (International)" : ""}</span>
-              <span>{shippingInr === 0 ? "Free" : `₹${shippingInr.toFixed(2)}`}</span>
+              <span>Shipping{isInternational ? " (International)" : ""}</span>
+              <span>
+                {shippingInr === 0 ? (
+                  "Free"
+                ) : (
+                  <>
+                    ₹{shippingInr.toFixed(2)}
+                    {isInternational && (
+                      <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(shippingInr)}</span>
+                    )}
+                  </>
+                )}
+              </span>
             </div>
           </div>
           <div className="mt-3 flex justify-between border-t border-ink/10 pt-3 font-heading text-lg font-bold text-ink">
             <span>Total</span>
-            <span>₹{totalInr.toFixed(2)}</span>
+            <span>
+              ₹{totalInr.toFixed(2)}
+              {isInternational && (
+                <span className="ml-1.5 text-sm font-normal text-ink/50">{formatUsdApprox(totalInr)}</span>
+              )}
+            </span>
           </div>
+          {isInternational && (
+            <p className="mt-2 text-right text-[11px] text-ink/40">
+              USD shown is an approximate reference only — you&apos;ll be charged in INR.
+            </p>
+          )}
         </div>
       </div>
     </div>

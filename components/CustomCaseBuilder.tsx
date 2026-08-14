@@ -8,11 +8,12 @@ import {
   CUSTOM_CASE_STYLES,
   CUSTOM_CASE_THEMES,
   CUSTOM_CASE_WEIGHTS,
+  CUSTOM_ORDER_TIMELINE_NOTE,
   CUSTOM_PRODUCT_TYPES,
   PHONE_MODELS,
   type CustomProductTypeSlug,
 } from "@/lib/constants";
-import { discountPercent } from "@/lib/pricing";
+import { getDisplayPricing } from "@/lib/pricing";
 import type { CustomCaseMode } from "@/lib/types";
 import { CartIcon, GiftIcon, WandIcon } from "@/components/Icons";
 
@@ -75,9 +76,13 @@ export function CustomCaseBuilder() {
 
   const typeConfig = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === productType)!;
   const pricing = mode === "build" ? typeConfig.build : typeConfig.surprise;
-  const buildPercentOff = discountPercent(typeConfig.build.mrpInr, typeConfig.build.priceInr);
-  const surprisePercentOff = discountPercent(typeConfig.surprise.mrpInr, typeConfig.surprise.priceInr);
-  const pricingPercentOff = mode === "build" ? buildPercentOff : surprisePercentOff;
+  // Display pricing reflects the currently-active auto-discount (e.g.
+  // LAUNCH50) that also applies at checkout, so the price/badge shown here
+  // always matches what's actually charged — pricing.priceInr itself (the
+  // raw, pre-auto-discount amount) is still what gets added to the cart.
+  const buildDisplay = getDisplayPricing(typeConfig.build.mrpInr, typeConfig.build.priceInr);
+  const surpriseDisplay = getDisplayPricing(typeConfig.surprise.mrpInr, typeConfig.surprise.priceInr);
+  const activeDisplay = mode === "build" ? buildDisplay : surpriseDisplay;
 
   const resolvedPhoneModel = phoneModel === PHONE_OTHER ? customPhoneModel.trim() : phoneModel;
   const resolvedTheme = theme === CUSTOM_TYPE_YOUR_OWN ? customTheme.trim() : theme;
@@ -148,6 +153,11 @@ export function CustomCaseBuilder() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      <div className="mb-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
+        <span className="text-lg leading-none">🎀</span>
+        <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+      </div>
+
       <div className="card p-5">
         <span className="mb-3 block font-heading text-sm font-semibold text-ink/70">
           What are we making?
@@ -185,13 +195,13 @@ export function CustomCaseBuilder() {
             <span className="block font-heading font-semibold text-ink">Build Your Own</span>
             <span className="block text-sm text-ink/60">
               Pick every detail yourself —{" "}
-              {buildPercentOff > 0 && (
-                <span className="line-through">₹{typeConfig.build.mrpInr}</span>
+              {buildDisplay.percentOff > 0 && (
+                <span className="line-through">₹{buildDisplay.mrpInr}</span>
               )}{" "}
-              ₹{typeConfig.build.priceInr}
-              {buildPercentOff > 0 && (
+              ₹{buildDisplay.effectivePriceInr}
+              {buildDisplay.percentOff > 0 && (
                 <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
-                  {buildPercentOff}% OFF
+                  {buildDisplay.percentOff}% OFF
                 </span>
               )}
             </span>
@@ -212,13 +222,13 @@ export function CustomCaseBuilder() {
             <span className="block font-heading font-semibold text-ink">Surprise Me</span>
             <span className="block text-sm text-ink/60">
               Tell me your dream, I&apos;ll design it —{" "}
-              {surprisePercentOff > 0 && (
-                <span className="line-through">₹{typeConfig.surprise.mrpInr}</span>
+              {surpriseDisplay.percentOff > 0 && (
+                <span className="line-through">₹{surpriseDisplay.mrpInr}</span>
               )}{" "}
-              ₹{typeConfig.surprise.priceInr}
-              {surprisePercentOff > 0 && (
+              ₹{surpriseDisplay.effectivePriceInr}
+              {surpriseDisplay.percentOff > 0 && (
                 <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
-                  {surprisePercentOff}% OFF
+                  {surpriseDisplay.percentOff}% OFF
                 </span>
               )}
             </span>
@@ -349,13 +359,13 @@ export function CustomCaseBuilder() {
 
       <div className="card mt-6 flex flex-col items-center gap-4 p-6 text-center">
         <div className="flex flex-wrap items-baseline justify-center gap-2">
-          {pricingPercentOff > 0 && (
-            <span className="font-heading text-lg text-ink/40 line-through">₹{pricing.mrpInr}</span>
+          {activeDisplay.percentOff > 0 && (
+            <span className="font-heading text-lg text-ink/40 line-through">₹{activeDisplay.mrpInr}</span>
           )}
-          <span className="font-heading text-2xl font-bold text-ink">₹{pricing.priceInr}</span>
-          {pricingPercentOff > 0 && (
+          <span className="font-heading text-2xl font-bold text-ink">₹{activeDisplay.effectivePriceInr}</span>
+          {activeDisplay.percentOff > 0 && (
             <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">
-              {pricingPercentOff}% OFF
+              {activeDisplay.percentOff}% OFF
             </span>
           )}
         </div>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
-import { FREE_SHIPPING_THRESHOLD_INR } from "@/lib/constants";
+import { CUSTOM_ORDER_TIMELINE_NOTE, FREE_SHIPPING_THRESHOLD_INR } from "@/lib/constants";
 import { GiftIcon, MinusIcon, PlusIcon, SparkleIcon, TrashIcon, WandIcon } from "@/components/Icons";
 
 export default function CartPage() {
@@ -25,6 +25,7 @@ export default function CartPage() {
   const payableInr = Math.max(0, subtotalInr - discount);
   const shippingInr = calculateShipping(payableInr);
   const totalInr = payableInr + shippingInr;
+  const hasCustomItem = items.some((i) => i.kind === "custom");
 
   function handleApplyCoupon() {
     if (!couponInput.trim()) return;
@@ -38,7 +39,7 @@ export default function CartPage() {
         <SparkleIcon className="h-10 w-10 text-lavender-dark" />
         <h1 className="mt-4 font-heading text-2xl font-bold text-ink">Your cart is empty</h1>
         <p className="mt-2 text-ink/60">
-          Nothing here yet — go find something covered in charms and bows.
+          Nothing here yet — go find something covered in cute charms and decoden cream.
         </p>
         <Link href="/shop" className="btn-primary mt-6">
           Browse the Shop
@@ -50,6 +51,13 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="font-heading text-3xl font-bold text-ink sm:text-4xl">Your Cart</h1>
+
+      {hasCustomItem && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
+          <span className="text-lg leading-none">🎀</span>
+          <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+        </div>
+      )}
 
       <div className="mt-8 flex flex-col gap-4">
         {items.map((item) => (

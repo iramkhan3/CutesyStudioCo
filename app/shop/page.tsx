@@ -11,7 +11,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Shop Decoden Phone Cases & Kawaii Accessories",
   description:
-    "Shop handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, and posters online in India — every piece covered in charms, bows, and swirls of cream.",
+    "Shop handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, and posters online in India — every piece covered in cute charms and satisfying swirls of decoden cream.",
   keywords: [
     "decoden phone case india",
     "kawaii phone case shop",
