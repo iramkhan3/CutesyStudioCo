@@ -401,8 +401,17 @@ export default function CheckoutPage() {
                   <div className="font-heading font-semibold text-ink">{item.name}</div>
                   <div className="text-ink/50">Qty {item.quantity}</div>
                 </div>
-                <div className="text-right text-sm font-semibold text-ink">
-                  <div>₹{(item.priceInr * item.quantity).toFixed(2)}</div>
+                <div className="text-right text-sm">
+                  <div className="flex items-baseline justify-end gap-1.5">
+                    {item.mrpInr > item.priceInr && (
+                      <span className="text-xs text-ink/40 line-through">
+                        ₹{(item.mrpInr * item.quantity).toFixed(2)}
+                      </span>
+                    )}
+                    <span className="font-semibold text-ink">
+                      ₹{(item.priceInr * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
                   {isInternational && (
                     <div className="text-xs font-normal text-ink/40">
                       {formatUsdApprox(item.priceInr * item.quantity)}

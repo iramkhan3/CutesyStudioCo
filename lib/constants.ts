@@ -98,7 +98,7 @@ export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
 // Flat domestic (India) shipping rate, waived above the free-shipping
 // threshold. Both are evaluated against the pre-discount cart subtotal.
 export const SHIPPING_FLAT_RATE_INR = 99;
-export const FREE_SHIPPING_THRESHOLD_INR = 999;
+export const FREE_SHIPPING_THRESHOLD_INR = 900;
 
 // International shipping — zone-based flat rates, since we don't have a live
 // courier API (Shiprocket/DHL/EasyPost etc.) wired up yet. This is a

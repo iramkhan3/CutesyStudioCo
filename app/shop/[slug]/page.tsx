@@ -57,7 +57,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const category = CATEGORIES.find((c) => c.slug === product.category);
-  const { mrpInr, effectivePriceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
+  const { mrpInr, priceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
   const allProducts = await getAllProducts();
   const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
@@ -76,7 +76,7 @@ export default async function ProductPage({
           offers: {
             "@type": "Offer",
             priceCurrency: "INR",
-            price: effectivePriceInr,
+            price: priceInr,
             availability:
               product.stock_quantity > 0
                 ? "https://schema.org/InStock"
@@ -110,7 +110,7 @@ export default async function ProductPage({
           <div className="mt-3 flex flex-wrap items-baseline gap-2">
             {percentOff > 0 && <span className="text-lg text-ink/40 line-through">₹{mrpInr}</span>}
             <span className="font-heading text-2xl font-bold text-pastel">
-              ₹{effectivePriceInr}
+              ₹{priceInr}
             </span>
             {percentOff > 0 && (
               <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">

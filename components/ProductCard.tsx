@@ -7,7 +7,7 @@ import { QuickAddButton } from "@/components/QuickAddButton";
 
 export function ProductCard({ product }: { product: Product }) {
   const category = CATEGORIES.find((c) => c.slug === product.category);
-  const { mrpInr, effectivePriceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
+  const { mrpInr, priceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
 
   return (
     <div className="card group flex flex-col overflow-hidden hover:rotate-1">
@@ -33,7 +33,7 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
         <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
           {percentOff > 0 && <span className="text-sm text-ink/40 line-through">₹{mrpInr}</span>}
-          <span className="font-heading text-lg font-bold text-ink">₹{effectivePriceInr}</span>
+          <span className="font-heading text-lg font-bold text-ink">₹{priceInr}</span>
           {percentOff > 0 && (
             <span className="rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[11px] font-bold text-pastel-dark">
               {percentOff}% OFF

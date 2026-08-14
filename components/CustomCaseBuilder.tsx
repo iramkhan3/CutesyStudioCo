@@ -76,10 +76,6 @@ export function CustomCaseBuilder() {
 
   const typeConfig = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === productType)!;
   const pricing = mode === "build" ? typeConfig.build : typeConfig.surprise;
-  // Display pricing reflects the currently-active auto-discount (e.g.
-  // LAUNCH50) that also applies at checkout, so the price/badge shown here
-  // always matches what's actually charged — pricing.priceInr itself (the
-  // raw, pre-auto-discount amount) is still what gets added to the cart.
   const buildDisplay = getDisplayPricing(typeConfig.build.mrpInr, typeConfig.build.priceInr);
   const surpriseDisplay = getDisplayPricing(typeConfig.surprise.mrpInr, typeConfig.surprise.priceInr);
   const activeDisplay = mode === "build" ? buildDisplay : surpriseDisplay;
@@ -124,6 +120,7 @@ export function CustomCaseBuilder() {
         id,
         name: `Custom ${typeConfig.name}${mode === "surprise" ? " (Surprise Me)" : ""}`,
         image: typeConfig.image,
+        mrpInr: pricing.mrpInr,
         priceInr: pricing.priceInr,
         customization:
           mode === "build"
@@ -198,7 +195,7 @@ export function CustomCaseBuilder() {
               {buildDisplay.percentOff > 0 && (
                 <span className="line-through">₹{buildDisplay.mrpInr}</span>
               )}{" "}
-              ₹{buildDisplay.effectivePriceInr}
+              ₹{buildDisplay.priceInr}
               {buildDisplay.percentOff > 0 && (
                 <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
                   {buildDisplay.percentOff}% OFF
@@ -225,7 +222,7 @@ export function CustomCaseBuilder() {
               {surpriseDisplay.percentOff > 0 && (
                 <span className="line-through">₹{surpriseDisplay.mrpInr}</span>
               )}{" "}
-              ₹{surpriseDisplay.effectivePriceInr}
+              ₹{surpriseDisplay.priceInr}
               {surpriseDisplay.percentOff > 0 && (
                 <span className="ml-1 rounded-full bg-pastel-dark/10 px-1.5 py-0.5 text-[10px] font-bold text-pastel-dark">
                   {surpriseDisplay.percentOff}% OFF
@@ -362,7 +359,7 @@ export function CustomCaseBuilder() {
           {activeDisplay.percentOff > 0 && (
             <span className="font-heading text-lg text-ink/40 line-through">₹{activeDisplay.mrpInr}</span>
           )}
-          <span className="font-heading text-2xl font-bold text-ink">₹{activeDisplay.effectivePriceInr}</span>
+          <span className="font-heading text-2xl font-bold text-ink">₹{activeDisplay.priceInr}</span>
           {activeDisplay.percentOff > 0 && (
             <span className="rounded-full bg-pastel-dark/10 px-2 py-0.5 text-xs font-bold text-pastel-dark">
               {activeDisplay.percentOff}% OFF

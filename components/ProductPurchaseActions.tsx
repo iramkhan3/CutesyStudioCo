@@ -22,6 +22,7 @@ export function ProductPurchaseActions({ product }: { product: Product }) {
         slug: product.slug,
         name: product.name,
         image: product.images[0],
+        mrpInr: product.mrp_inr,
         priceInr: product.price_inr,
       },
       quantity

@@ -1,4 +1,3 @@
-import { calculateDiscount } from "@/lib/coupons";
 import { USD_INR_RATE } from "@/lib/constants";
 
 /**
@@ -13,39 +12,32 @@ export function discountPercent(mrpInr: number, priceInr: number): number {
 
 export type DisplayPricing = {
   mrpInr: number;
-  effectivePriceInr: number;
+  priceInr: number;
   percentOff: number;
 };
 
 /**
- * What a customer actually ends up paying per unit, right now, including
- * any currently-active sitewide auto-discount (e.g. the LAUNCH50 coupon) —
- * NOT just the raw price_inr. price_inr alone understates the real discount
- * whenever an auto-coupon is active, since that coupon applies again on top
- * of it at checkout: showing "50% OFF" on a product page while the cart
- * silently applies another 50% on top is a bait-and-switch, so every
- * customer-facing price/badge should be computed from this, not price_inr
- * directly. Cart/checkout math is untouched by this — they still start from
- * price_inr and apply the coupon at the subtotal level, and the two now
- * agree because this helper runs the exact same calculateDiscount() a
- * single unit would see.
+ * MRP vs. price_inr display, plain and simple — the % off badge shown on
+ * product cards/detail/the custom builder is just mrp_inr vs. price_inr.
+ * It deliberately does NOT fold in any cart-level coupon (e.g. LAUNCH50):
+ * that's a separate, additional discount shown only in the cart/checkout
+ * breakdown, same as any normal store shows "MRP / our price" on a product
+ * page and a coupon discount only once you're in the cart.
  */
 export function getDisplayPricing(mrpInr: number, priceInr: number): DisplayPricing {
-  const { discount } = calculateDiscount(priceInr, null);
-  const effectivePriceInr = Math.round((priceInr - discount) * 100) / 100;
-  return { mrpInr, effectivePriceInr, percentOff: discountPercent(mrpInr, effectivePriceInr) };
+  return { mrpInr, priceInr, percentOff: discountPercent(mrpInr, priceInr) };
 }
 
 /**
  * Approximate USD string for showing alongside an INR amount at checkout
- * for international orders, e.g. "$7.23" — reference only, see
- * USD_INR_RATE. Always call formatUsdApprox() for the "(~$X.XX)" bracket
- * form customers actually see.
+ * for international orders, e.g. "7.23" — reference only, see
+ * USD_INR_RATE. Always call formatUsdApprox() for the "(~$X.XX USD)"
+ * bracket form customers actually see.
  */
 export function toUsdApprox(inr: number): string {
   return (inr / USD_INR_RATE).toFixed(2);
 }
 
 export function formatUsdApprox(inr: number): string {
-  return `(~$${toUsdApprox(inr)})`;
+  return `(~$${toUsdApprox(inr)} USD)`;
 }
