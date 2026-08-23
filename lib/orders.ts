@@ -44,13 +44,17 @@ export async function createPendingOrder(input: {
 
   // `payment_provider` is a newer column (added for PayPal) — if
   // supabase/schema.sql's migration for it hasn't been re-run yet on this
-  // database, PostgREST rejects the insert with 42703 ("column does not
-  // exist"). Fall back to the base insert (omitting that column) so the
-  // already-working Razorpay flow never breaks because of an unrelated
-  // pending migration. A genuine PayPal order still needs that column
-  // though, so it correctly keeps failing (-> null -> friendly 503) until
-  // the migration runs.
-  const isMissingColumn = (error as { code?: string } | null)?.code === "42703";
+  // database, PostgREST rejects the insert. It reports this differently
+  // depending on context: "42703" (Postgres' own "column does not exist")
+  // or "PGRST204" (PostgREST's schema-cache "could not find column" for an
+  // insert) — check both. Fall back to the base insert (omitting that
+  // column) so the already-working Razorpay flow never breaks because of an
+  // unrelated pending migration. A genuine PayPal order still needs that
+  // column though, so it correctly keeps failing (-> null -> friendly 503)
+  // until the migration runs.
+  const isMissingColumn = ["42703", "PGRST204"].includes(
+    (error as { code?: string } | null)?.code ?? ""
+  );
   if (isMissingColumn && (!input.paymentProvider || input.paymentProvider === "razorpay")) {
     const retry = await supabase.from("orders").insert(baseRow).select().single();
     if (!retry.error && retry.data) return retry.data as OrderRecord;
