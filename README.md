@@ -1,15 +1,17 @@
 # CutesyStudioCo
 
 Handmade decoden storefront — Next.js 14 (App Router) + TypeScript + Tailwind CSS,
-with a real cart/checkout backed by Supabase (Postgres) and Razorpay. Cream-swirled
-decoden and cute charms, made to bring a little joy to the world, one cute thing
-at a time.
+with a real cart/checkout backed by Supabase (Postgres), Razorpay, and PayPal.
+Cream-swirled decoden and cute charms, made to bring a little joy to the world,
+one cute thing at a time.
 
 ## Stack
 
 - **Framework:** Next.js 14 App Router, TypeScript, Tailwind CSS
 - **Database:** Supabase (Postgres) — products, orders, newsletter subscribers
-- **Payments:** Razorpay Standard Checkout (Orders API + signature verification)
+- **Payments:** Razorpay Standard Checkout (Orders API + signature verification,
+  INR — Indian buyers) and PayPal Orders v2 (JS SDK + server-side capture,
+  USD — international buyers). Customer picks one at checkout.
 - **Cart state:** Zustand, persisted to `localStorage` until checkout completes
 - **Email:** Resend (optional — order confirmation emails; safely no-ops if unset)
 - **Deploy target:** Vercel (free tier)
@@ -35,7 +37,9 @@ Open [http://localhost:3000](http://localhost:3000).
 product pages, and the cart all work using a local seed catalog
 ([lib/data/products.ts](lib/data/products.ts)) as a fallback when Supabase
 isn't configured yet. Checkout and the newsletter signup will show a friendly
-"not configured yet" message until you connect Supabase + Razorpay (below).
+"not configured yet" message until you connect Supabase + Razorpay/PayPal
+(below). If PayPal specifically isn't configured, its checkout option shows a
+"coming soon" state rather than crashing — Razorpay works independently.
 
 ## 2. Supabase setup
 
@@ -50,7 +54,7 @@ isn't configured yet. Checkout and the newsletter signup will show a friendly
    uses the **service role key**, and only **server-side** (API routes /
    Server Components) — it's never sent to the browser.
 
-## 3. Razorpay setup
+## 3. Razorpay setup (Indian buyers — Card / UPI / Netbanking)
 
 1. Create a free account at [razorpay.com](https://razorpay.com).
 2. In **Settings → API Keys**, generate a **Key ID** and **Key Secret**
@@ -59,17 +63,42 @@ isn't configured yet. Checkout and the newsletter signup will show a friendly
    server-side to create orders and verify payment signatures — never
    exposed to the client.
 4. **Currency note:** this checkout charges in **INR** using each product's
-   `price_inr` value — the whole site is INR-only, no USD anywhere.
-   Razorpay's Standard Checkout supports international cards, but
-   whether your specific account can accept them depends on your Razorpay
-   KYC/account settings — check your dashboard, or reach out to Razorpay
-   support if international cards are declined.
+   `price_inr` value. Razorpay's Standard Checkout supports international
+   cards, but whether your specific account can accept them depends on your
+   Razorpay KYC/account settings — check your dashboard, or reach out to
+   Razorpay support if international cards are declined. For buyers who'd
+   rather pay in USD, point them at the PayPal option instead (below).
 5. ⚠️ If you've ever pasted a Razorpay key into a chat tool, doc, or ticket,
    treat it as compromised and rotate it from the dashboard before going live.
 
-## 4. Environment variables
+## 4. PayPal setup (international buyers — USD)
 
-Copy `.env.example` to `.env.local` and fill in the values from steps 2–3:
+1. Create a free account at [developer.paypal.com](https://developer.paypal.com)
+   (your regular PayPal account works — this just unlocks the developer
+   dashboard).
+2. Under **Apps & Credentials**, you'll see two tabs: **Sandbox** and
+   **Live**. Start with **Sandbox** — click your default app (or create one)
+   and copy the **Client ID** and **Secret**.
+3. Add both to your environment as `NEXT_PUBLIC_PAYPAL_CLIENT_ID` /
+   `PAYPAL_CLIENT_SECRET`, and leave `PAYPAL_ENVIRONMENT=sandbox` (the
+   default — see step 4 below).
+4. To test a full checkout without real money, use a **Sandbox test buyer
+   account** (Developer Dashboard → **Sandbox → Accounts** — PayPal
+   auto-creates a test personal account you can log into on the PayPal
+   checkout popup).
+5. **Going live:** switch to the **Live** tab in Apps & Credentials, copy
+   those Client ID/Secret into the same env var names (in Vercel, for the
+   Production environment), and set `PAYPAL_ENVIRONMENT=live`. Until you
+   explicitly set that to `"live"`, the app always talks to PayPal's sandbox
+   API — a typo or unset var fails safe into sandbox, never silently into
+   live.
+6. **Currency note:** PayPal orders charge in **USD** using each product's
+   `price_usd` value (a fixed, editable field — not a live conversion from
+   `price_inr`; see [lib/data/products.ts](lib/data/products.ts)).
+
+## 5. Environment variables
+
+Copy `.env.example` to `.env.local` and fill in the values from steps 2–4:
 
 ```bash
 cp .env.example .env.local
@@ -82,20 +111,23 @@ cp .env.example .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | All DB reads/writes (server-only) | **No — server only** |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Opens the Razorpay checkout modal | Yes |
 | `RAZORPAY_KEY_SECRET` | Creates orders + verifies payment signatures | **No — server only** |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Loads the PayPal JS SDK / renders the button | Yes |
+| `PAYPAL_CLIENT_SECRET` | Orders v2 API auth (create + capture) | **No — server only** |
+| `PAYPAL_ENVIRONMENT` | `sandbox` (default) or `live` | Yes |
 | `RESEND_API_KEY` | Sends order confirmation emails (optional) | **No — server only** |
 | `RESEND_FROM_EMAIL` | "From" address for confirmation emails | No |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URL for SEO/OG tags & sitemap | Yes |
 
 `.env` / `.env.local` are already git-ignored — never commit real secrets.
 
-## 5. Deploy to Vercel
+## 6. Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. In [vercel.com](https://vercel.com), **Add New Project** → import the repo.
    Vercel auto-detects Next.js — no config changes needed.
 3. In **Project Settings → Environment Variables**, add every variable from
-   the table above (use your **live** Razorpay keys for production, test
-   keys for Preview deployments if you want).
+   the table above (use your **live** Razorpay/PayPal keys for production,
+   test/sandbox keys for Preview deployments if you want).
 4. Deploy. Then in **Project Settings → Domains**, add `cutesystudioco.com`
    and follow Vercel's instructions to repoint your DNS from Hostinger
    (usually an A record + CNAME, or delegating nameservers).
@@ -105,11 +137,18 @@ cp .env.example .env.local
 ## Order flow (how the checkout works)
 
 1. **Cart** (`/cart`) — Zustand store, persisted in `localStorage`.
-2. **Checkout** (`/checkout`) — customer fills shipping details →
-   `POST /api/create-order`.
-3. **`/api/create-order`** re-prices the cart from the database (never
-   trusts client-sent prices), creates a `pending` row in `orders`, creates
-   a matching Razorpay order, and returns the Razorpay order ID + public key.
+2. **Checkout** (`/checkout`) — customer fills shipping details, then picks a
+   **Payment Method**: Card/UPI/Netbanking via Razorpay, or PayPal. Both
+   paths share the same shipping-details form and validation; only the
+   payment step differs.
+
+**Razorpay path (INR):**
+
+3. Submitting the form calls `POST /api/create-order`, which re-prices the
+   cart from the database using `price_inr` (never trusts client-sent
+   prices), creates a `pending` row in `orders` (`payment_provider:
+   'razorpay'`), creates a matching Razorpay order, and returns the Razorpay
+   order ID + public key.
 4. The browser opens the Razorpay checkout modal (loaded via
    `checkout.js`). On success, Razorpay returns a payment ID, order ID, and
    signature.
@@ -117,11 +156,31 @@ cp .env.example .env.local
    server-side with the secret key and compares it (constant-time) against
    what the client sent. Only on a match does it mark the order `paid`,
    decrement stock, and (optionally) send a confirmation email.
-6. Customer is redirected to `/order-confirmation?orderId=...`.
 
-If Supabase or Razorpay aren't configured, `/api/create-order` returns a
-friendly 503 instead of crashing, and the checkout page surfaces that error
-with a note to contact us directly.
+**PayPal path (USD):**
+
+3. Clicking the PayPal button calls `POST /api/paypal/create-order`, which
+   re-prices the cart from the database using `price_usd`, creates a
+   `pending` row in `orders` (`payment_provider: 'paypal'`, `currency:
+   'USD'`), creates a matching order via PayPal's Orders v2 API, and returns
+   the PayPal order ID for the JS SDK button to use.
+4. The buyer approves the payment in PayPal's popup/redirect flow (handled
+   entirely by `@paypal/react-paypal-js`'s `PayPalButtons`).
+5. On approval, **`/api/paypal/capture-order`** captures the payment
+   server-side via PayPal's API, then re-verifies the captured amount and
+   currency against the order total already computed in step 3 — same
+   never-trust-the-client principle as the Razorpay signature check, just
+   comparing an amount instead of a signature. Only on a match does it mark
+   the order `paid`, decrement stock, and (optionally) send a confirmation
+   email.
+
+6. Either path redirects to `/order-confirmation?orderId=...`.
+
+If Supabase, Razorpay, or PayPal aren't configured, the relevant
+`create-order` route returns a friendly 503 instead of crashing, and the
+checkout page surfaces that error (or, for PayPal specifically, shows a
+"coming soon" state instead of the button) with a note to contact us
+directly.
 
 ## Custom builder (`/custom`) — the site's main focus
 
@@ -155,25 +214,33 @@ keep both in sync as you add/remove stock.
 
 ## Pricing model — MRP vs. selling price
 
-Every product has two independent, directly-editable price fields:
+Every product has three independent, directly-editable price fields:
 
 - **`mrp_inr`** — the strikethrough "full price" shown on product cards and
   detail pages.
-- **`price_inr`** — the actual selling price (what customers pay before any
-  coupon), also shown on the card.
+- **`price_inr`** — the actual INR selling price (what Razorpay customers
+  pay before any coupon), also shown on the card.
+- **`price_usd`** — the fixed USD price PayPal customers pay. Seeded as a
+  reference-rate conversion of `price_inr` (`USD_INR_RATE` in
+  [lib/constants.ts](lib/constants.ts)) at the time each product was added,
+  **not** computed live at checkout — edit it directly if you want USD
+  pricing that doesn't track the INR price exactly.
 
-They're set per-product with no shared formula — edit either one directly in
+They're set per-product with no shared formula — edit any of them directly in
 [lib/data/products.ts](lib/data/products.ts) (and Supabase) for a clearance,
 a price bump, whatever the reason. The sitewide `LAUNCH50` coupon (see
-Coupons below) applies **on top of** `price_inr` at checkout, same as it
-always has — the MRP display doesn't change that math.
+Coupons below) applies **on top of** `price_inr` / `price_usd` at checkout,
+same as it always has — the MRP display doesn't change that math.
 
-⚠️ **One-time migration needed:** the `mrp_inr` column was added to
+⚠️ **One-time migration needed:** the `mrp_inr` column, and — for the
+PayPal integration — `price_usd` on `products` plus `payment_provider` /
+`paypal_order_id` / `paypal_capture_id` on `orders`, were all added to
 `supabase/schema.sql` after your Supabase project was already created.
 Re-run the updated [supabase/schema.sql](supabase/schema.sql) in the
-Supabase SQL Editor (it's idempotent — safe to re-run) to add the column and
+Supabase SQL Editor (it's idempotent — safe to re-run) to add the columns and
 sync the new prices. Until you do, the site falls back gracefully (no MRP
-shown, `price_inr` still correct) rather than breaking.
+shown, `price_inr` still correct, PayPal orders simply can't be created)
+rather than breaking.
 
 ## Coupons
 
@@ -217,6 +284,9 @@ expiry dates or per-customer codes later.
 - [ ] **Rotate Razorpay test keys** — the test key/secret used during
       development should be rotated before going live, and definitely if
       they were ever shared outside a secrets manager.
+- [ ] **Switch `PAYPAL_ENVIRONMENT` to `"live"` and add live credentials**
+      before launch — see "PayPal setup" above. It defaults to `"sandbox"` on
+      purpose; nothing charges real money until you explicitly flip this.
 - [x] **Shipping cost logic** — flat ₹99 domestic (India) shipping, free
       above ₹999 of what the customer is actually paying (subtotal minus
       any coupon/launch discount — not the raw pre-discount subtotal, so a
@@ -238,8 +308,9 @@ expiry dates or per-customer codes later.
 ```
 app/                    Routes (App Router)
   api/                   create-order, verify-payment, newsletter route handlers
+  api/paypal/            create-order, capture-order route handlers (PayPal)
   shop/[slug]/           Product detail pages
-  custom/                Custom phone case builder ("Build Your Own" / "Surprise Me")
+  custom/                Custom builder ("Build Your Own" / "Surprise Me")
   cart/, checkout/, order-confirmation/
 components/             Shared UI (Navbar, Footer, ProductCard, CustomCaseBuilder, icons, etc.)
 lib/
@@ -247,7 +318,8 @@ lib/
   supabase/admin.ts       Server-only Supabase client
   products.ts, orders.ts  Data access layer (Supabase w/ seed fallback)
   coupons.ts              Coupon/discount calculation (shared by cart preview + order API)
-  razorpay.ts, email.ts   Payment + email clients
+  razorpay.ts, paypal.ts  Payment provider clients
+  email.ts                Confirmation email (Resend)
   store/cart.ts           Zustand cart store (product + custom line items, coupon code)
 supabase/schema.sql      Full SQL schema + seed data for Supabase
 public/products/*.svg    Placeholder product images (swap for real photos)

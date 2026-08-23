@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Script from "next/script";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { calculateShipping } from "@/lib/shipping";
@@ -17,6 +18,10 @@ declare global {
     Razorpay: any;
   }
 }
+
+const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+
+type PaymentMethod = "razorpay" | "paypal";
 
 type FormState = {
   name: string;
@@ -92,6 +97,13 @@ export default function CheckoutPage() {
   const [scriptReady, setScriptReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
+  // PayPalButtons' createOrder must return the PayPal order id (a string) —
+  // our own internal order id (needed later, in onApprove, to call
+  // /api/paypal/capture-order and to build the confirmation-page link) is
+  // stashed here instead of in state, since it's only ever read synchronously
+  // within the same button click's callback chain.
+  const pendingOrderIdRef = useRef<string | null>(null);
 
   const fieldErrors = validateForm(form);
   const hasErrors = Object.keys(fieldErrors).length > 0;
@@ -112,10 +124,39 @@ export default function CheckoutPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
+  // Shared payload builder — both /api/create-order (Razorpay) and
+  // /api/paypal/create-order accept the exact same shape.
+  function buildOrderPayload() {
+    return {
+      items: items.map((i) =>
+        i.kind === "product"
+          ? { kind: "product", productId: i.productId, quantity: i.quantity }
+          : {
+              kind: "custom",
+              name: i.name,
+              image: i.image,
+              customization: i.customization,
+              quantity: i.quantity,
+            }
+      ),
+      couponCode,
+      customer: { name: form.name, email: form.email, phone: form.phone },
+      shippingAddress: {
+        line1: form.line1,
+        line2: form.line2 || undefined,
+        city: form.city,
+        state: form.state,
+        postalCode: form.postalCode,
+        country: form.country,
+      },
+    };
+  }
 
+  // Shared pre-payment validation for both payment methods — returns false
+  // (and surfaces the error/touched-field state) if the form or cart isn't
+  // ready to submit.
+  function validateBeforePayment(): boolean {
+    setError(null);
     if (hasErrors) {
       setTouched({
         name: true,
@@ -128,14 +169,21 @@ export default function CheckoutPage() {
         country: true,
       });
       setError("Please fix the highlighted fields before continuing.");
-      return;
-    }
-    if (!scriptReady) {
-      setError("Payment is still loading — please try again in a second.");
-      return;
+      return false;
     }
     if (items.length === 0) {
       setError("Your cart is empty.");
+      return false;
+    }
+    return true;
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    if (!validateBeforePayment()) return;
+    if (!scriptReady) {
+      setError("Payment is still loading — please try again in a second.");
       return;
     }
 
@@ -144,29 +192,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: items.map((i) =>
-            i.kind === "product"
-              ? { kind: "product", productId: i.productId, quantity: i.quantity }
-              : {
-                  kind: "custom",
-                  name: i.name,
-                  image: i.image,
-                  customization: i.customization,
-                  quantity: i.quantity,
-                }
-          ),
-          couponCode,
-          customer: { name: form.name, email: form.email, phone: form.phone },
-          shippingAddress: {
-            line1: form.line1,
-            line2: form.line2 || undefined,
-            city: form.city,
-            state: form.state,
-            postalCode: form.postalCode,
-            country: form.country,
-          },
-        }),
+        body: JSON.stringify(buildOrderPayload()),
       });
 
       const data = await res.json();
@@ -231,6 +257,59 @@ export default function CheckoutPage() {
       rzp.open();
     } catch {
       setError("Something went wrong. Please check your connection and try again.");
+      setLoading(false);
+    }
+  }
+
+  // PayPalButtons calls this on click and expects the PayPal order id back
+  // (a string) — our own order id is stashed in pendingOrderIdRef for
+  // onApprove to use afterwards. Throwing aborts the PayPal flow, which is
+  // exactly what we want on a validation or server error.
+  async function handlePaypalCreateOrder(): Promise<string> {
+    if (!validateBeforePayment()) {
+      throw new Error("Checkout form isn't valid yet.");
+    }
+    setLoading(true);
+    const res = await fetch("/api/paypal/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildOrderPayload()),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "Something went wrong creating your order. Please try again.");
+      setLoading(false);
+      throw new Error(data.error || "Failed to create PayPal order.");
+    }
+    pendingOrderIdRef.current = data.orderId;
+    return data.paypalOrderId as string;
+  }
+
+  async function handlePaypalApprove(data: { orderID: string }) {
+    const orderId = pendingOrderIdRef.current;
+    if (!orderId) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+      return;
+    }
+    try {
+      const captureRes = await fetch("/api/paypal/capture-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, paypalOrderId: data.orderID }),
+      });
+      const captureData = await captureRes.json();
+      if (!captureRes.ok || !captureData.success) {
+        setError(
+          "We couldn't confirm your payment automatically. If money was deducted, please contact us with your order number."
+        );
+        setLoading(false);
+        return;
+      }
+      clearCart();
+      router.push(`/order-confirmation?orderId=${orderId}`);
+    } catch {
+      setError("We couldn't confirm your payment. Please contact us if you were charged.");
       setLoading(false);
     }
   }
@@ -370,13 +449,76 @@ export default function CheckoutPage() {
             </label>
           </div>
 
+          <div>
+            <span className="mb-2 block font-heading text-sm font-semibold text-ink/70">
+              Payment Method
+            </span>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("razorpay")}
+                className={`card flex-1 p-4 text-left transition-transform hover:-translate-y-0.5 ${
+                  paymentMethod === "razorpay" ? "ring-2 ring-pastel" : ""
+                }`}
+              >
+                <span className="block font-heading text-sm font-semibold text-ink">
+                  Card / UPI / Netbanking
+                </span>
+                <span className="block text-xs text-ink/60">via Razorpay</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("paypal")}
+                className={`card flex-1 p-4 text-left transition-transform hover:-translate-y-0.5 ${
+                  paymentMethod === "paypal" ? "ring-2 ring-pastel" : ""
+                }`}
+              >
+                <span className="block font-heading text-sm font-semibold text-ink">PayPal</span>
+                <span className="block text-xs text-ink/60">for international buyers</span>
+              </button>
+            </div>
+            <div className="mt-3 rounded-xl2 border-2 border-lavender-dark/20 bg-lavender-light/40 p-3 text-xs leading-relaxed text-ink/70">
+              <p>🇮🇳 Indian buyers: Use UPI, Cards, or Netbanking via Razorpay for the fastest checkout.</p>
+              <p className="mt-1">🌍 International buyers: Use PayPal for a trusted, familiar checkout experience.</p>
+            </div>
+          </div>
+
           {error && (
             <p className="rounded-xl2 bg-blush-light p-3 text-sm text-pastel-dark">{error}</p>
           )}
 
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? "Processing..." : `Pay ₹${totalInr.toFixed(2)} with Razorpay`}
-          </button>
+          {paymentMethod === "razorpay" ? (
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? "Processing..." : `Pay ₹${totalInr.toFixed(2)} with Razorpay`}
+            </button>
+          ) : PAYPAL_CLIENT_ID ? (
+            <div>
+              <p className="mb-2 text-center text-xs text-ink/50">
+                You&apos;ll pay approximately {formatUsdApprox(totalInr)} via PayPal
+              </p>
+              <PayPalScriptProvider
+                options={{ clientId: PAYPAL_CLIENT_ID, currency: "USD", intent: "capture" }}
+              >
+                <PayPalButtons
+                  style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
+                  disabled={loading}
+                  forceReRender={[totalInr, form.country]}
+                  createOrder={handlePaypalCreateOrder}
+                  onApprove={handlePaypalApprove}
+                  onCancel={() => setLoading(false)}
+                  onError={(err) => {
+                    console.error("[checkout] PayPal error:", err);
+                    setError("PayPal payment failed or was cancelled. Please try again.");
+                    setLoading(false);
+                  }}
+                />
+              </PayPalScriptProvider>
+            </div>
+          ) : (
+            <div className="rounded-xl2 border-2 border-ink/10 bg-blush-light/50 p-4 text-center text-sm text-ink/50">
+              PayPal checkout is coming soon — please use Razorpay for now.
+            </div>
+          )}
         </form>
 
         <div className="card h-fit p-6">

@@ -73,6 +73,7 @@ export type CustomOrderItemSnapshot = {
 export type OrderItemSnapshot = ProductOrderItemSnapshot | CustomOrderItemSnapshot;
 
 export type PaymentStatus = "pending" | "paid" | "failed";
+export type PaymentProvider = "razorpay" | "paypal";
 
 export type OrderRecord = {
   id: string;
@@ -80,15 +81,25 @@ export type OrderRecord = {
   email: string;
   phone: string | null;
   shipping_address: ShippingAddress;
+  // subtotal/discount_amount/shipping_amount/total_amount are all
+  // denominated in `currency` — for a Razorpay order that's INR (using each
+  // item's price_inr); for a PayPal order it's USD (using each item's
+  // price_usd), computed independently rather than converted from the INR
+  // figures. `unitPriceInr` on each item snapshot is likewise "unit price
+  // in this order's currency" despite the name — kept as-is to avoid a
+  // sitewide rename, since every order to date has been INR/Razorpay.
   items: OrderItemSnapshot[];
   subtotal: number;
   coupon_code: string | null;
   discount_amount: number;
   shipping_amount: number;
   total_amount: number;
-  currency: "INR";
+  currency: "INR" | "USD";
   payment_status: PaymentStatus;
+  payment_provider: PaymentProvider;
   razorpay_order_id: string | null;
   razorpay_payment_id: string | null;
+  paypal_order_id: string | null;
+  paypal_capture_id: string | null;
   created_at: string;
 };

@@ -175,9 +175,15 @@ export type CustomProductType = {
   name: string;
   requiresPhoneModel: boolean;
   image: string;
-  build: { mrpInr: number; priceInr: number };
-  surprise: { mrpInr: number; priceInr: number };
+  build: { mrpInr: number; priceInr: number; priceUsd: number };
+  surprise: { mrpInr: number; priceInr: number; priceUsd: number };
 };
+
+// Reference-rate USD price for the PayPal flow (see USD_INR_RATE above) —
+// PayPal orders charge this exact value, same principle as price_inr for
+// Razorpay: never derived on the fly at checkout, always a fixed, editable
+// number you can adjust directly.
+const usd = (inr: number) => Math.round((inr / USD_INR_RATE) * 100) / 100;
 
 export const CUSTOM_PRODUCT_TYPES: CustomProductType[] = [
   {
@@ -185,40 +191,40 @@ export const CUSTOM_PRODUCT_TYPES: CustomProductType[] = [
     name: "Phone Case",
     requiresPhoneModel: true,
     image: "/products/real/pink-hello-kitty-case.jpg",
-    build: { mrpInr: 1999, priceInr: 1000 },
-    surprise: { mrpInr: 1799, priceInr: 900 },
+    build: { mrpInr: 1999, priceInr: 1000, priceUsd: usd(1000) },
+    surprise: { mrpInr: 1799, priceInr: 900, priceUsd: usd(900) },
   },
   {
     slug: "hairbrush",
     name: "Hairbrush",
     requiresPhoneModel: false,
     image: "/products/real/sugar-bow-comb.jpg",
-    build: { mrpInr: 1199, priceInr: 600 },
-    surprise: { mrpInr: 1099, priceInr: 550 },
+    build: { mrpInr: 1199, priceInr: 600, priceUsd: usd(600) },
+    surprise: { mrpInr: 1099, priceInr: 550, priceUsd: usd(550) },
   },
   {
     slug: "hand-mirror",
     name: "Hand Mirror",
     requiresPhoneModel: false,
     image: "/products/real/bubblegum-bow-mirror-1.jpg",
-    build: { mrpInr: 699, priceInr: 350 },
-    surprise: { mrpInr: 649, priceInr: 325 },
+    build: { mrpInr: 699, priceInr: 350, priceUsd: usd(350) },
+    surprise: { mrpInr: 649, priceInr: 325, priceUsd: usd(325) },
   },
   {
     slug: "table-mirror",
     name: "Table Mirror",
     requiresPhoneModel: false,
     image: "/products/real/bow-heart-mirror.jpg",
-    build: { mrpInr: 699, priceInr: 350 },
-    surprise: { mrpInr: 649, priceInr: 325 },
+    build: { mrpInr: 699, priceInr: 350, priceUsd: usd(350) },
+    surprise: { mrpInr: 649, priceInr: 325, priceUsd: usd(325) },
   },
   {
     slug: "keychain",
     name: "Keychain",
     requiresPhoneModel: false,
     image: "/products/real/sweetheart-keychain-duo.jpg",
-    build: { mrpInr: 599, priceInr: 300 },
-    surprise: { mrpInr: 549, priceInr: 275 },
+    build: { mrpInr: 599, priceInr: 300, priceUsd: usd(300) },
+    surprise: { mrpInr: 549, priceInr: 275, priceUsd: usd(275) },
   },
 ];
 

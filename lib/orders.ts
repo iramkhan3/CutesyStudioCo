@@ -1,6 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type { OrderItemSnapshot, OrderRecord, ShippingAddress } from "@/lib/types";
+import type { OrderItemSnapshot, OrderRecord, PaymentProvider, ShippingAddress } from "@/lib/types";
 
 export async function createPendingOrder(input: {
   customerName: string;
@@ -13,37 +13,62 @@ export async function createPendingOrder(input: {
   discountAmount: number;
   shippingAmount: number;
   totalAmount: number;
+  currency?: "INR" | "USD";
+  paymentProvider?: PaymentProvider;
 }): Promise<OrderRecord | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
+  const baseRow = {
+    customer_name: input.customerName,
+    email: input.email,
+    phone: input.phone,
+    shipping_address: input.shippingAddress,
+    items: input.items,
+    subtotal: input.subtotal,
+    coupon_code: input.couponCode,
+    discount_amount: input.discountAmount,
+    shipping_amount: input.shippingAmount,
+    total_amount: input.totalAmount,
+    currency: input.currency ?? "INR",
+    payment_status: "pending",
+  };
+
   const { data, error } = await supabase
     .from("orders")
-    .insert({
-      customer_name: input.customerName,
-      email: input.email,
-      phone: input.phone,
-      shipping_address: input.shippingAddress,
-      items: input.items,
-      subtotal: input.subtotal,
-      coupon_code: input.couponCode,
-      discount_amount: input.discountAmount,
-      shipping_amount: input.shippingAmount,
-      total_amount: input.totalAmount,
-      currency: "INR",
-      payment_status: "pending",
-    })
+    .insert({ ...baseRow, payment_provider: input.paymentProvider ?? "razorpay" })
     .select()
     .single();
 
-  if (error || !data) return null;
-  return data as OrderRecord;
+  if (!error && data) return data as OrderRecord;
+
+  // `payment_provider` is a newer column (added for PayPal) — if
+  // supabase/schema.sql's migration for it hasn't been re-run yet on this
+  // database, PostgREST rejects the insert with 42703 ("column does not
+  // exist"). Fall back to the base insert (omitting that column) so the
+  // already-working Razorpay flow never breaks because of an unrelated
+  // pending migration. A genuine PayPal order still needs that column
+  // though, so it correctly keeps failing (-> null -> friendly 503) until
+  // the migration runs.
+  const isMissingColumn = (error as { code?: string } | null)?.code === "42703";
+  if (isMissingColumn && (!input.paymentProvider || input.paymentProvider === "razorpay")) {
+    const retry = await supabase.from("orders").insert(baseRow).select().single();
+    if (!retry.error && retry.data) return retry.data as OrderRecord;
+  }
+
+  return null;
 }
 
 export async function attachRazorpayOrderId(orderId: string, razorpayOrderId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   await supabase.from("orders").update({ razorpay_order_id: razorpayOrderId }).eq("id", orderId);
+}
+
+export async function attachPaypalOrderId(orderId: string, paypalOrderId: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  await supabase.from("orders").update({ paypal_order_id: paypalOrderId }).eq("id", orderId);
 }
 
 export async function markOrderPaid(orderId: string, razorpayPaymentId: string) {
@@ -53,6 +78,21 @@ export async function markOrderPaid(orderId: string, razorpayPaymentId: string) 
   const { data, error } = await supabase
     .from("orders")
     .update({ payment_status: "paid", razorpay_payment_id: razorpayPaymentId })
+    .eq("id", orderId)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+  return data as OrderRecord;
+}
+
+export async function markOrderPaidPaypal(orderId: string, paypalCaptureId: string) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ payment_status: "paid", paypal_capture_id: paypalCaptureId })
     .eq("id", orderId)
     .select()
     .single();

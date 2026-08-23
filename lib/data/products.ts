@@ -14,6 +14,11 @@ export type Product = {
   // it always has — MRP display here doesn't change that math at all.
   mrp_inr: number;
   price_inr: number;
+  // Fixed USD price charged for PayPal orders (see lib/paypal.ts) — a
+  // reference-rate conversion of price_inr at seed time (USD_INR_RATE in
+  // lib/constants.ts), not computed live. Edit directly if you want a price
+  // that doesn't track the INR price exactly.
+  price_usd: number;
   images: string[];
   stock_quantity: number;
   active: boolean;
@@ -38,6 +43,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A dreamy magenta-pink case piled high with Hello Kitty charms, swirls of piped cream, and a satin bow. Each charm is placed and sealed by hand, so the exact arrangement on yours will be one of a kind.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/pink-hello-kitty-case.jpg"],
     stock_quantity: 12,
     active: true,
@@ -51,6 +57,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Moody purple and black cream stripes with a cluster of ghost-cute charms and tiny hearts tucked throughout. Soft on the edges, tough where it counts, and unapologetically extra.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/purple-ghost-case.jpg"],
     stock_quantity: 9,
     active: true,
@@ -64,6 +71,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A baby-blue padded case with a whole sky of pastel clouds, tiny stars, and a trim of sweet little charms. Roomy enough for daily use, cute enough for your whole feed.",
     mrp_inr: 6998,
     price_inr: 3499,
+    price_usd: 42.16,
     images: ["/products/tablet-cases.svg"],
     stock_quantity: 7,
     active: true,
@@ -77,6 +85,7 @@ export const SEED_PRODUCTS: Product[] = [
       "An adjustable stand wrapped in a garden of pastel bows and piped cream swirls. Sturdy enough for movie nights, cute enough to leave out on your desk.",
     mrp_inr: 6398,
     price_inr: 3199,
+    price_usd: 38.54,
     images: ["/products/tablet-holders.svg"],
     stock_quantity: 10,
     active: true,
@@ -90,6 +99,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A lavender-and-white jewelry box piped edge-to-edge with butterflies, bows, hearts, and a sweet bear charm tucked in the corner. The kind of thing that makes getting ready feel special.",
     mrp_inr: 899,
     price_inr: 450,
+    price_usd: 5.42,
     images: ["/products/real/charm-garden-jewelry-box.jpg"],
     stock_quantity: 6,
     active: true,
@@ -103,6 +113,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Two-tone pastel makeup storage with a dreamy cream-swirled lid and a cluster of charms at the clasp. Enough room for your everyday routine, cute enough to never hide away.",
     mrp_inr: 7798,
     price_inr: 3899,
+    price_usd: 46.98,
     images: ["/products/makeup-boxes.svg"],
     stock_quantity: 8,
     active: true,
@@ -116,6 +127,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A wide-tooth wooden comb with a lollipop centerpiece and a border of cream swirls in purple, pink, and yellow, dotted with bear, bunny, and Hello Kitty charms. Smooth on hair, soft on the eyes.",
     mrp_inr: 699,
     price_inr: 350,
+    price_usd: 4.22,
     images: ["/products/real/sugar-bow-comb.jpg"],
     stock_quantity: 15,
     active: true,
@@ -129,6 +141,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A round hand mirror in a pastel rainbow piped border, dotted with a bear, a bunny, a donut, Hello Kitty, and tiny candy charms. Cute enough for a desk, sturdy enough for daily touch-ups.",
     mrp_inr: 399,
     price_inr: 200,
+    price_usd: 2.41,
     images: [
       "/products/real/bubblegum-bow-mirror-1.jpg",
       "/products/real/bubblegum-bow-mirror-2.jpg",
@@ -145,6 +158,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A clear resin charm piped with a ring of hearts and a pastel flower center, finished with a sturdy keyring clasp. Sweet enough for keys, cute enough for a bag.",
     mrp_inr: 349,
     price_inr: 175,
+    price_usd: 2.11,
     images: ["/products/real/sweetheart-keychain-duo.jpg"],
     stock_quantity: 20,
     active: true,
@@ -158,6 +172,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A golden-yellow charm topped with a sleepy bear face, a sunflower, and a shimmering butterfly. Small, sturdy, and impossible to leave off your bag.",
     mrp_inr: 349,
     price_inr: 175,
+    price_usd: 2.11,
     images: ["/products/real/sunshine-bear-keychain.jpg"],
     stock_quantity: 18,
     active: true,
@@ -171,6 +186,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A soft pastel print inspired by our decoden pieces — clouds, tiny stars, and a sprinkle of sparkle. Ships flat, ready for your favorite frame.",
     mrp_inr: 3798,
     price_inr: 1899,
+    price_usd: 22.88,
     images: ["/products/posters.svg"],
     stock_quantity: 25,
     active: true,
@@ -184,6 +200,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A lavender-and-white tablet case loaded with My Melody and Hello Kitty charms, hearts, flowers, and a sweet bear, with \"LOVE\" and \"HAPPY\" spelled out in tiny letter beads. Protective corners, pillowy-soft feel, full decoden charm coverage.",
     mrp_inr: 7398,
     price_inr: 3699,
+    price_usd: 44.57,
     images: ["/products/real/lavender-dream-tablet-case.jpg"],
     stock_quantity: 5,
     active: true,
@@ -202,6 +219,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Already made and waiting to ship — pastel rainbow cream stripes loaded with Hello Kitty charms and a little \"LOVE\" charm at the base. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/rainbow-hello-kitty-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -215,6 +233,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A warm caramel-toned case piled with cookie, biscuit, and pastry charms and a \"SWEET\" charm tucked in. Cut for an Android-style vertical triple-camera layout. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/cookies-cream-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -228,6 +247,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Soft pink, blue, yellow, and lilac cream bands with sweet dog-eared charms and a tiny ferris wheel charm at the center. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/carousel-dreams-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -241,6 +261,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A deep maroon case laced with a black bow and scattered red heart charms — moody, romantic, and a little dramatic. Cut for an iPhone 12-14 Pro style camera layout. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/midnight-rose-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -254,6 +275,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A translucent lilac case hand-set with dozens of tiny purple and white beads — bows, flowers, butterflies, and stars. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: [
       "/products/real/lilac-garden-case-1.jpg",
       "/products/real/lilac-garden-case-2.jpg",
@@ -271,6 +293,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A creamy white case with a mirrored ferris-wheel charm, a bear, a bunny, and a \"LOVE\" charm tucked into swirls of piped cream. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: [
       "/products/real/vanilla-carousel-case-1.jpg",
       "/products/real/vanilla-carousel-case-2.jpg",
@@ -287,6 +310,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Baby-blue and white cream waves dotted with Cinnamoroll charms, bows, and butterflies, finished with a tiny \"cute\" charm. Cut for an Android-style quad-camera (2x2) layout. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/cinnamoroll-sky-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -300,6 +324,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Black cream borders framing a bold pastel rainbow stripe, dotted with butterflies and a Kuromi-style charm — sweet with an edge. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/rainbow-noir-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -313,6 +338,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Purple cream borders around a pastel rainbow stripe loaded with Santa, snowman, gingerbread, and reindeer charms. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/christmas-sparkle-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -326,6 +352,7 @@ export const SEED_PRODUCTS: Product[] = [
       "Pink, white, and lavender cream stripes with Hello Kitty, My Melody, and Cinnamoroll charms nestled among piped roses and bows. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: ["/products/real/rose-garden-sanrio-case.jpg"],
     stock_quantity: 1,
     active: true,
@@ -339,6 +366,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A rich red and white striped case with Santa, snowman, gingerbread, and holly charms tucked into piped cream — a mirror-backed holiday favorite. One-of-one, ships in 1-2 days.",
     mrp_inr: 1199,
     price_inr: 600,
+    price_usd: 7.23,
     images: [
       "/products/real/merry-berry-case-1.jpg",
       "/products/real/merry-berry-case-2.jpg",
@@ -355,6 +383,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A wide-tooth hairbrush with a purple charm garden handle — three sweet bear charms nestled in swirls of cream. One-of-one, ships in 1-2 days.",
     mrp_inr: 699,
     price_inr: 350,
+    price_usd: 4.22,
     images: ["/products/real/bear-charm-hairbrush.jpg"],
     stock_quantity: 1,
     active: true,
@@ -368,6 +397,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A rectangular vanity mirror framed in lilac and pink cream, dotted with hearts, bows, and butterflies. One-of-one, ships in 1-2 days.",
     mrp_inr: 399,
     price_inr: 200,
+    price_usd: 2.41,
     images: [
       "/products/real/bow-heart-mirror.jpg",
       "/products/real/bow-heart-mirror-2.jpg",
@@ -384,6 +414,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A round hand mirror in blush pink, edged in black cream and studded with pearl shells, roses, bows, and butterflies. One-of-one, ships in 1-2 days.",
     mrp_inr: 399,
     price_inr: 200,
+    price_usd: 2.41,
     images: [
       "/products/real/pearl-garden-mirror-1.jpg",
       "/products/real/pearl-garden-mirror-2.jpg",
@@ -400,6 +431,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A round hand mirror wreathed in holiday cream — Santa, snowman, gingerbread, and reindeer charms tucked among holly and \"MERRY\" lettering. One-of-one, ships in 1-2 days.",
     mrp_inr: 399,
     price_inr: 200,
+    price_usd: 2.41,
     images: ["/products/real/merry-mirror.jpg"],
     stock_quantity: 1,
     active: true,
@@ -413,6 +445,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A holiday trinket box piped in red and green cream, loaded with Santa, snowman, gingerbread, reindeer, and gift-box charms and a \"MERRY\" charm on the lid. One-of-one, ships in 1-2 days.",
     mrp_inr: 899,
     price_inr: 450,
+    price_usd: 5.42,
     images: [
       "/products/real/merry-trinket-box-1.jpg",
       "/products/real/merry-trinket-box-2.jpg",
@@ -429,6 +462,7 @@ export const SEED_PRODUCTS: Product[] = [
       "A Hello Kitty bag charm dressed in pink cream swirls, bows, and a little \"LOVE\" charm — the easiest way to decoden-ify your bag or keys. One-of-one, ships in 1-2 days.",
     mrp_inr: 349,
     price_inr: 175,
+    price_usd: 2.11,
     images: ["/products/real/hello-kitty-bag-charm.jpg"],
     stock_quantity: 1,
     active: true,

@@ -28,12 +28,14 @@ export async function sendOrderConfirmationEmail(order: OrderRecord) {
     return;
   }
 
+  const symbol = order.currency === "USD" ? "$" : "₹";
+
   const itemsHtml = order.items
     .map(
       (item) =>
         `<tr>
           <td style="padding:8px 0;">${item.name} × ${item.quantity}</td>
-          <td style="padding:8px 0; text-align:right;">₹${(item.unitPriceInr * item.quantity).toFixed(2)}</td>
+          <td style="padding:8px 0; text-align:right;">${symbol}${(item.unitPriceInr * item.quantity).toFixed(2)}</td>
         </tr>`
     )
     .join("");
@@ -42,13 +44,13 @@ export async function sendOrderConfirmationEmail(order: OrderRecord) {
     order.discount_amount > 0
       ? `<tr>
           <td style="padding-top:4px; color:#B06A98;">Discount${order.coupon_code ? ` (${order.coupon_code})` : ""}</td>
-          <td style="padding-top:4px; text-align:right; color:#B06A98;">-₹${order.discount_amount.toFixed(2)}</td>
+          <td style="padding-top:4px; text-align:right; color:#B06A98;">-${symbol}${order.discount_amount.toFixed(2)}</td>
         </tr>`
       : "";
 
   const shippingHtml = `<tr>
           <td style="padding-top:4px;">Shipping</td>
-          <td style="padding-top:4px; text-align:right;">${order.shipping_amount === 0 ? "Free" : `₹${order.shipping_amount.toFixed(2)}`}</td>
+          <td style="padding-top:4px; text-align:right;">${order.shipping_amount === 0 ? "Free" : `${symbol}${order.shipping_amount.toFixed(2)}`}</td>
         </tr>`;
 
   const html = `
@@ -62,7 +64,7 @@ export async function sendOrderConfirmationEmail(order: OrderRecord) {
         ${shippingHtml}
         <tr>
           <td style="padding-top:12px; font-weight:bold;">Total</td>
-          <td style="padding-top:12px; font-weight:bold; text-align:right;">₹${order.total_amount.toFixed(2)}</td>
+          <td style="padding-top:12px; font-weight:bold; text-align:right;">${symbol}${order.total_amount.toFixed(2)}</td>
         </tr>
       </table>
       <p>We'll email you again once your order ships. If you have any questions, just reply to this email or reach us at ${SITE.email}.</p>

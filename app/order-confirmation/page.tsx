@@ -38,6 +38,8 @@ export default async function OrderConfirmationPage({
     );
   }
 
+  const currencySymbol = order.currency === "USD" ? "$" : "₹";
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
       <div className="flex flex-col items-center text-center">
@@ -72,7 +74,7 @@ export default async function OrderConfirmationPage({
                 )}
               </div>
               <span className="font-semibold text-ink">
-                ₹{(item.unitPriceInr * item.quantity).toFixed(2)}
+                {currencySymbol}{(item.unitPriceInr * item.quantity).toFixed(2)}
               </span>
             </div>
           ))}
@@ -80,22 +82,22 @@ export default async function OrderConfirmationPage({
         <div className="mt-4 space-y-1 border-t border-ink/10 pt-4 text-sm">
           <div className="flex justify-between text-ink/60">
             <span>Subtotal</span>
-            <span>₹{order.subtotal.toFixed(2)}</span>
+            <span>{currencySymbol}{order.subtotal.toFixed(2)}</span>
           </div>
           {order.discount_amount > 0 && (
             <div className="flex justify-between text-pastel-dark">
               <span>Discount {order.coupon_code ? `(${order.coupon_code === "LAUNCH50" ? "Launch Offer" : order.coupon_code})` : ""}</span>
-              <span>-₹{order.discount_amount.toFixed(2)}</span>
+              <span>-{currencySymbol}{order.discount_amount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between text-ink/60">
             <span>Shipping</span>
-            <span>{order.shipping_amount === 0 ? "Free" : `₹${order.shipping_amount.toFixed(2)}`}</span>
+            <span>{order.shipping_amount === 0 ? "Free" : `${currencySymbol}${order.shipping_amount.toFixed(2)}`}</span>
           </div>
         </div>
         <div className="mt-3 flex justify-between border-t border-ink/10 pt-3 font-heading text-lg font-bold text-ink">
           <span>Total</span>
-          <span>₹{order.total_amount.toFixed(2)}</span>
+          <span>{currencySymbol}{order.total_amount.toFixed(2)}</span>
         </div>
 
         <div className="mt-6 border-t border-ink/10 pt-4 text-sm text-ink/70">

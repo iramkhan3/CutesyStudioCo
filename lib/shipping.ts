@@ -3,6 +3,7 @@ import {
   INTERNATIONAL_SHIPPING_DEFAULT_INR,
   INTERNATIONAL_SHIPPING_ZONES,
   SHIPPING_FLAT_RATE_INR,
+  USD_INR_RATE,
 } from "@/lib/constants";
 
 /**
@@ -27,4 +28,18 @@ export function calculateShipping(payableInr: number, country?: string): number 
   }
 
   return INTERNATIONAL_SHIPPING_ZONES[country.trim()] ?? INTERNATIONAL_SHIPPING_DEFAULT_INR;
+}
+
+/**
+ * Same shipping logic, for a USD-denominated (PayPal) order. There's no
+ * separate USD-native shipping rate table — this converts the USD payable
+ * amount to its INR-equivalent (via USD_INR_RATE) purely to run the same
+ * calculateShipping() rules (so the domestic free-shipping threshold still
+ * behaves consistently regardless of which payment provider a customer
+ * picks), then converts the resulting INR shipping figure back to USD.
+ */
+export function calculateShippingUsd(payableUsd: number, country?: string): number {
+  const payableInrEquivalent = payableUsd * USD_INR_RATE;
+  const shippingInr = calculateShipping(payableInrEquivalent, country);
+  return Math.round((shippingInr / USD_INR_RATE) * 100) / 100;
 }
