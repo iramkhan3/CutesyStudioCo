@@ -8,8 +8,9 @@ import { useRouter } from "next/navigation";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
+import { useCoupons } from "@/lib/hooks/useCoupons";
 import { calculateShipping } from "@/lib/shipping";
-import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, SITE } from "@/lib/constants";
+import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE } from "@/lib/constants";
 import { formatUsdApprox } from "@/lib/pricing";
 import { GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
@@ -50,9 +51,21 @@ const EMPTY_FORM: FormState = {
 const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,80}$/u;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(\+?\d{1,3}[\s-]?)?\d{7,12}$/;
-const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
+// India uses a strict 6-digit PIN (first digit 1-9, no leading zero) — that's
+// checkable precisely, unlike international postal codes which vary too
+// widely in format to validate tightly, so those just get a loose sanity check.
+const INDIA_PINCODE_RE = /^[1-9]\d{5}$/;
+const GENERIC_POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
 
-function validateField(key: keyof FormState, value: string): string | null {
+function validatePostalCode(value: string, country: string): string | null {
+  const trimmed = value.trim();
+  if (country === "India") {
+    return INDIA_PINCODE_RE.test(trimmed) ? null : "Enter a valid 6-digit PIN code (no leading 0).";
+  }
+  return GENERIC_POSTAL_CODE_RE.test(trimmed) ? null : "Enter a valid postal code.";
+}
+
+function validateField(key: keyof FormState, value: string, country: string): string | null {
   switch (key) {
     case "name":
       return NAME_RE.test(value.trim()) ? null : "Enter your full name.";
@@ -61,7 +74,7 @@ function validateField(key: keyof FormState, value: string): string | null {
     case "phone":
       return PHONE_RE.test(value.trim()) ? null : "Enter a valid phone number.";
     case "postalCode":
-      return POSTAL_CODE_RE.test(value.trim()) ? null : "Enter a valid postal code.";
+      return validatePostalCode(value, country);
     case "line1":
       return value.trim().length >= 4 ? null : "Enter your street address.";
     case "city":
@@ -79,17 +92,21 @@ function validateForm(form: FormState): Partial<Record<keyof FormState, string>>
   const errors: Partial<Record<keyof FormState, string>> = {};
   (Object.keys(form) as (keyof FormState)[]).forEach((key) => {
     if (key === "line2") return;
-    const message = validateField(key, form[key]);
+    const message = validateField(key, form[key], form.country);
     if (message) errors[key] = message;
   });
   return errors;
 }
 
+const PHONE_OTHER = "My phone isn't listed (type below)";
+
 export default function CheckoutPage() {
   const items = useCartStore((s) => s.items);
   const couponCode = useCartStore((s) => s.couponCode);
   const clearCart = useCartStore((s) => s.clearCart);
+  const updateItemPhoneModel = useCartStore((s) => s.updateItemPhoneModel);
   const router = useRouter();
+  const [phoneModelTouched, setPhoneModelTouched] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [countrySelect, setCountrySelect] = useState("");
@@ -112,13 +129,24 @@ export default function CheckoutPage() {
     setTouched((t) => ({ ...t, [key]: true }));
   }
 
+  const coupons = useCoupons();
+  // The LAUNCH50 launch offer (auto-applied, no code needed) is a domestic
+  // INR incentive only — app/api/paypal/create-order excludes it server-side
+  // for PayPal orders, so it's excluded here too, otherwise this preview
+  // would show a discount that PayPal checkout won't actually give.
+  const effectiveCoupons = paymentMethod === "paypal" ? coupons.filter((c) => !c.autoApply) : coupons;
   const subtotalInr = cartSubtotalInr(items);
-  const { discount, coupon } = calculateDiscount(subtotalInr, couponCode);
+  const { discount, coupon } = calculateDiscount(subtotalInr, couponCode, effectiveCoupons);
   const payableInr = Math.max(0, subtotalInr - discount);
   const shippingInr = calculateShipping(payableInr, form.country);
   const totalInr = payableInr + shippingInr;
   const hasCustomItem = items.some((i) => i.kind === "custom");
   const isInternational = !!form.country && form.country !== "India";
+  const itemsNeedingPhoneModel = items.filter(
+    (i): i is Extract<typeof i, { kind: "product" }> =>
+      i.kind === "product" && PHONE_CASE_CATEGORIES.includes(i.category)
+  );
+  const missingPhoneModelIds = itemsNeedingPhoneModel.filter((i) => !i.phoneModel?.trim()).map((i) => i.id);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -130,7 +158,7 @@ export default function CheckoutPage() {
     return {
       items: items.map((i) =>
         i.kind === "product"
-          ? { kind: "product", productId: i.productId, quantity: i.quantity }
+          ? { kind: "product", productId: i.productId, quantity: i.quantity, phoneModel: i.phoneModel || undefined }
           : {
               kind: "custom",
               name: i.name,
@@ -173,6 +201,11 @@ export default function CheckoutPage() {
     }
     if (items.length === 0) {
       setError("Your cart is empty.");
+      return false;
+    }
+    if (missingPhoneModelIds.length > 0) {
+      setPhoneModelTouched(new Set(missingPhoneModelIds));
+      setError("Please select a phone model for every phone case in your cart.");
       return false;
     }
     return true;
@@ -562,6 +595,16 @@ export default function CheckoutPage() {
                 </div>
               </div>
             ))}
+            {itemsNeedingPhoneModel.map((item) => (
+              <PhoneModelField
+                key={`phone-${item.id}`}
+                itemName={item.name}
+                value={item.phoneModel ?? ""}
+                onChange={(v) => updateItemPhoneModel(item.id, v)}
+                touched={phoneModelTouched.has(item.id)}
+                onTouch={() => setPhoneModelTouched((s) => new Set(s).add(item.id))}
+              />
+            ))}
           </div>
           <div className="mt-6 space-y-1 border-t border-ink/10 pt-4 text-sm">
             <div className="flex justify-between text-ink/60">
@@ -616,6 +659,61 @@ export default function CheckoutPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PhoneModelField({
+  itemName,
+  value,
+  onChange,
+  touched,
+  onTouch,
+}: {
+  itemName: string;
+  value: string;
+  onChange: (v: string) => void;
+  touched: boolean;
+  onTouch: () => void;
+}) {
+  const isCustom = !!value && !PHONE_MODELS.includes(value);
+  const selectValue = isCustom ? PHONE_OTHER : value;
+  const showError = touched && !value.trim();
+
+  return (
+    <div className={`rounded-xl2 border-2 p-3 ${showError ? "border-pastel-dark" : "border-ink/10"}`}>
+      <span className="mb-1 block text-xs font-semibold text-ink/70">
+        Phone model for &quot;{itemName}&quot; <span className="text-pastel-dark">*</span>
+      </span>
+      <select
+        required
+        value={selectValue}
+        onChange={(e) => onChange(e.target.value === PHONE_OTHER ? "" : e.target.value)}
+        onBlur={onTouch}
+        className="w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+      >
+        <option value="" disabled>
+          Select your phone model
+        </option>
+        {PHONE_MODELS.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+        <option value={PHONE_OTHER}>{PHONE_OTHER}</option>
+      </select>
+      {(isCustom || selectValue === PHONE_OTHER) && (
+        <input
+          type="text"
+          required
+          placeholder="Type your phone model"
+          value={isCustom ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onTouch}
+          className="mt-2 w-full rounded-xl2 border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink focus:border-pastel focus:outline-none"
+        />
+      )}
+      {showError && <p className="mt-1 text-xs text-pastel-dark">Select or type a phone model.</p>}
     </div>
   );
 }

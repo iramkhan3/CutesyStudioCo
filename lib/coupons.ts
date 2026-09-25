@@ -1,8 +1,8 @@
-import { AUTO_APPLY_COUPON_CODE, COUPONS, LAUNCH_OFFER_ACTIVE, type Coupon } from "@/lib/constants";
+import type { Coupon } from "@/lib/constants";
 
-export function getCoupon(code: string): Coupon | null {
+export function findCoupon(code: string, coupons: Coupon[]): Coupon | null {
   const normalized = code.trim().toUpperCase();
-  return COUPONS[normalized] ?? null;
+  return coupons.find((c) => c.code === normalized) ?? null;
 }
 
 export type CouponResult = {
@@ -12,18 +12,21 @@ export type CouponResult = {
 };
 
 /**
- * Pure discount calculation shared by the cart preview (client) and the
- * order API (server, authoritative). Never trust a discount amount computed
- * anywhere but here run against the server's own subtotal.
+ * Pure discount calculation shared by the cart/checkout preview (client,
+ * fetches `coupons` from GET /api/coupons) and the order API (server,
+ * authoritative — fetches via lib/coupons-data.ts). Never trust a discount
+ * amount computed anywhere but here, run against the server's own subtotal,
+ * with the server's own `coupons` list.
  */
-export function calculateDiscount(subtotalInr: number, code?: string | null): CouponResult {
-  const effectiveCode = code && code.trim() ? code : LAUNCH_OFFER_ACTIVE ? AUTO_APPLY_COUPON_CODE : null;
+export function calculateDiscount(subtotalInr: number, code: string | null | undefined, coupons: Coupon[]): CouponResult {
+  const autoApply = coupons.find((c) => c.autoApply) ?? null;
+  const effectiveCode = code && code.trim() ? code : autoApply?.code ?? null;
 
   if (!effectiveCode) {
     return { discount: 0, coupon: null, error: null };
   }
 
-  const coupon = getCoupon(effectiveCode);
+  const coupon = findCoupon(effectiveCode, coupons);
   if (!coupon) {
     return { discount: 0, coupon: null, error: "That coupon code isn't valid." };
   }

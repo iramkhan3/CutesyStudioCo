@@ -3,8 +3,12 @@ import { getProductsByIds } from "@/lib/products";
 import { getRazorpayClient } from "@/lib/razorpay";
 import { createPendingOrder, attachRazorpayOrderId } from "@/lib/orders";
 import { calculateDiscount } from "@/lib/coupons";
+import { getCoupons } from "@/lib/coupons-data";
 import { calculateShipping } from "@/lib/shipping";
-import { CUSTOM_PRODUCT_TYPES } from "@/lib/constants";
+import { getCustomProductTypes } from "@/lib/custom-types";
+import { PHONE_CASE_CATEGORIES } from "@/lib/constants";
+import type { CustomProductType } from "@/lib/constants";
+import { firstImageUrl } from "@/lib/media";
 import type { CustomCaseSelection, OrderItemSnapshot, ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -14,11 +18,18 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Indian mobile number, or a generic 7-15 digit international number so we
 // don't block legitimate international customers.
 const PHONE_RE = /^(\+?\d{1,3}[\s-]?)?\d{7,12}$/;
-const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
+// India uses a strict 6-digit PIN (no leading 0) — checkable precisely.
+// International postal codes vary too widely in format for a tight check.
+const INDIA_PINCODE_RE = /^[1-9]\d{5}$/;
+const GENERIC_POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
 const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,80}$/u;
 
+function isValidPostalCode(value: string, country: string): boolean {
+  return country === "India" ? INDIA_PINCODE_RE.test(value) : GENERIC_POSTAL_CODE_RE.test(value);
+}
+
 type RequestItem =
-  | { kind: "product"; productId: string; quantity: number }
+  | { kind: "product"; productId: string; quantity: number; phoneModel?: string }
   | { kind: "custom"; name: string; image: string; customization: CustomCaseSelection; quantity: number };
 
 type RequestBody = {
@@ -28,10 +39,10 @@ type RequestBody = {
   shippingAddress?: ShippingAddress;
 };
 
-function isValidCustomization(c: unknown): c is CustomCaseSelection {
+function isValidCustomization(c: unknown, customTypes: CustomProductType[]): c is CustomCaseSelection {
   if (!c || typeof c !== "object") return false;
   const custom = c as CustomCaseSelection;
-  const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === custom.productType);
+  const type = customTypes.find((t) => t.slug === custom.productType);
   if (!type) return false;
 
   if (custom.mode === "surprise") {
@@ -64,6 +75,7 @@ export async function POST(req: Request) {
   }
 
   const { items, couponCode, customer, shippingAddress } = body;
+  const customTypes = await getCustomProductTypes();
 
   // --- basic input validation ------------------------------------------
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -86,7 +98,10 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json({ error: "Please complete your shipping address." }, { status: 400 });
   }
-  if (!shippingAddress?.postalCode?.trim() || !POSTAL_CODE_RE.test(shippingAddress.postalCode.trim())) {
+  if (
+    !shippingAddress?.postalCode?.trim() ||
+    !isValidPostalCode(shippingAddress.postalCode.trim(), shippingAddress.country.trim())
+  ) {
     return NextResponse.json({ error: "Please provide a valid postal code." }, { status: 400 });
   }
   for (const item of items) {
@@ -96,7 +111,7 @@ export async function POST(req: Request) {
     if (item.kind === "product" && !item.productId) {
       return NextResponse.json({ error: "Invalid item in cart." }, { status: 400 });
     }
-    if (item.kind === "custom" && !isValidCustomization(item.customization)) {
+    if (item.kind === "custom" && !isValidCustomization(item.customization, customTypes)) {
       return NextResponse.json({ error: "Your custom case is missing some details." }, { status: 400 });
     }
   }
@@ -118,20 +133,27 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+      if (PHONE_CASE_CATEGORIES.includes(product.category) && !item.phoneModel?.trim()) {
+        return NextResponse.json(
+          { error: `Please select a phone model for "${product.name}".` },
+          { status: 400 }
+        );
+      }
       orderItems.push({
         kind: "product",
         productId: product.id,
         slug: product.slug,
         name: product.name,
-        image: product.images[0],
+        image: firstImageUrl(product.images) ?? "",
         unitPriceInr: product.price_inr,
         quantity: item.quantity,
+        phoneModel: item.phoneModel?.trim() || undefined,
       });
     } else {
       // Custom item pricing is fixed by product type + mode — never trust a
       // client-sent price. isValidCustomization() above already confirmed
       // productType matches a known type, so this lookup can't miss.
-      const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === item.customization.productType)!;
+      const type = customTypes.find((t) => t.slug === item.customization.productType)!;
       const unitPriceInr =
         item.customization.mode === "surprise" ? type.surprise.priceInr : type.build.priceInr;
       orderItems.push({
@@ -148,7 +170,8 @@ export async function POST(req: Request) {
   const subtotal = orderItems.reduce((sum, i) => sum + i.unitPriceInr * i.quantity, 0);
 
   // --- coupon (authoritative — recomputed here, never trusts a client amount) --
-  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode);
+  const coupons = await getCoupons();
+  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode, coupons);
   if (couponCode && couponCode.trim() && !coupon) {
     return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
   }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cart";
 import type { Product } from "@/lib/data/products";
+import { firstImageUrl } from "@/lib/media";
 import { CartIcon, MinusIcon, PlusIcon } from "@/components/Icons";
 
 export function ProductPurchaseActions({ product }: { product: Product }) {
@@ -21,9 +22,10 @@ export function ProductPurchaseActions({ product }: { product: Product }) {
         productId: product.id,
         slug: product.slug,
         name: product.name,
-        image: product.images[0],
+        image: firstImageUrl(product.images) ?? "",
         mrpInr: product.mrp_inr,
         priceInr: product.price_inr,
+        category: product.category,
       },
       quantity
     );

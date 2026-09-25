@@ -30,6 +30,14 @@ export type ProductCartItem = {
   mrpInr: number;
   priceInr: number;
   quantity: number;
+  // Product's category at the time it was added — lets checkout know which
+  // items are phone-case-shaped and need a phone model without a re-lookup.
+  category: string;
+  // Every "Existing Designs" piece can be recreated for any phone (see the
+  // category description) — required at checkout for phone-case-shaped
+  // items so we know which model to fit it to. Filled in on the checkout
+  // page, not at add-to-cart time.
+  phoneModel?: string;
 };
 
 export type CustomCartItem = {
@@ -59,6 +67,7 @@ export type ProductOrderItemSnapshot = {
   image: string;
   unitPriceInr: number;
   quantity: number;
+  phoneModel?: string;
 };
 
 export type CustomOrderItemSnapshot = {
@@ -74,6 +83,7 @@ export type OrderItemSnapshot = ProductOrderItemSnapshot | CustomOrderItemSnapsh
 
 export type PaymentStatus = "pending" | "paid" | "failed";
 export type PaymentProvider = "razorpay" | "paypal";
+export type FulfillmentStatus = "unfulfilled" | "shipped" | "delivered" | "cancelled";
 
 export type OrderRecord = {
   id: string;
@@ -101,5 +111,9 @@ export type OrderRecord = {
   razorpay_payment_id: string | null;
   paypal_order_id: string | null;
   paypal_capture_id: string | null;
+  fulfillment_status: FulfillmentStatus;
+  tracking_number: string | null;
+  courier: string | null;
+  admin_notes: string | null;
   created_at: string;
 };

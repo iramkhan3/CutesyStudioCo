@@ -10,6 +10,7 @@ type CartState = {
   addItem: (item: CartLineItemInput, quantity?: number) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateItemPhoneModel: (id: string, phoneModel: string) => void;
   clearCart: () => void;
   applyCoupon: (code: string) => void;
   clearCoupon: () => void;
@@ -47,6 +48,10 @@ export const useCartStore = create<CartState>()(
             quantity <= 0
               ? state.items.filter((i) => i.id !== id)
               : state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+        })),
+      updateItemPhoneModel: (id, phoneModel) =>
+        set((state) => ({
+          items: state.items.map((i) => (i.id === id && i.kind === "product" ? { ...i, phoneModel } : i)),
         })),
       clearCart: () => set({ items: [], couponCode: null }),
       applyCoupon: (code) => set({ couponCode: code.trim().toUpperCase() }),

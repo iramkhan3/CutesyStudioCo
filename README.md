@@ -116,6 +116,8 @@ cp .env.example .env.local
 | `PAYPAL_ENVIRONMENT` | `sandbox` (default) or `live` | Yes |
 | `RESEND_API_KEY` | Sends order confirmation emails (optional) | **No — server only** |
 | `RESEND_FROM_EMAIL` | "From" address for confirmation emails | No |
+| `ADMIN_PASSWORD` | Password for `/admin` (order management) | **No — server only** |
+| `ADMIN_SESSION_SECRET` | Signs the `/admin` session cookie | **No — server only** |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URL for SEO/OG tags & sitemap | Yes |
 
 `.env` / `.env.local` are already git-ignored — never commit real secrets.
@@ -242,6 +244,43 @@ sync the new prices. Until you do, the site falls back gracefully (no MRP
 shown, `price_inr` still correct, PayPal orders simply can't be created)
 rather than breaking.
 
+## Admin dashboard (`/admin`) — order management
+
+A password-protected area for running the shop day to day, separate from the
+Supabase dashboard:
+
+- **`/admin/login`** — single shared password (`ADMIN_PASSWORD`). On success,
+  a signed, `httpOnly` session cookie is set (`ADMIN_SESSION_SECRET` signs
+  it, 7-day expiry). `middleware.ts` gates every other `/admin/*` page and
+  every `/api/admin/*` route behind a valid cookie — if either env var is
+  unset, login is disabled entirely (fails closed, never open).
+- **`/admin`** — dashboard: orders placed today, orders still awaiting
+  payment, paid orders not yet shipped, and 30-day revenue (INR and USD
+  tracked separately — never summed together, since they're different
+  currencies), plus the 8 most recent orders.
+- **`/admin/orders`** — every order, searchable (name/email/order ID),
+  filterable by payment status, payment provider, and fulfillment status,
+  paginated 25 at a time.
+- **`/admin/orders/[id]`** — full order detail: line items (including the
+  full custom-builder selection for `custom` items — theme, style, phone
+  model, note, etc.), pricing breakdown, payment provider/IDs, customer
+  contact info, shipping address, and a form to set **fulfillment status**
+  (unfulfilled / shipped / delivered / cancelled), **courier + tracking
+  number**, and **internal notes** (never shown to the customer).
+
+This is entirely separate from `payment_status` (which only Razorpay
+signature verification / PayPal capture verification can change — the admin
+dashboard never touches money state, only shipping state) — see `orders`
+table changes in [supabase/schema.sql](supabase/schema.sql)
+(`fulfillment_status`, `tracking_number`, `courier`, `admin_notes`).
+
+⚠️ **Change the password.** `ADMIN_PASSWORD` was set to a randomly generated
+value during setup — change it any time by editing the env var (locally and
+in Vercel) and redeploying; no code change needed. `/admin` is also excluded
+from search indexing (`app/robots.ts` + page-level `robots: noindex`), but
+that's not a substitute for a strong password — it's a public URL, not a
+secret one.
+
 ## Coupons
 
 A flat coupon system lives in [lib/coupons.ts](lib/coupons.ts) +
@@ -281,14 +320,22 @@ expiry dates or per-customer codes later.
 - [ ] **Resend confirmation emails** — set `RESEND_API_KEY` +
       `RESEND_FROM_EMAIL` (with a verified sending domain) to activate order
       confirmation emails. Until then, they're silently skipped.
-- [ ] **Rotate Razorpay test keys** — the test key/secret used during
-      development should be rotated before going live, and definitely if
-      they were ever shared outside a secrets manager.
-- [ ] **Switch `PAYPAL_ENVIRONMENT` to `"live"` and add live credentials**
-      before launch — see "PayPal setup" above. It defaults to `"sandbox"` on
-      purpose; nothing charges real money until you explicitly flip this.
+- [x] **Rotate Razorpay test keys** — production now uses a genuine
+      `rzp_live_...` key pair generated from the Razorpay dashboard's Live
+      Mode (verified against the live Orders API, not just pasted in). Note
+      for future rotations: Razorpay's key *prefix* is the only reliable
+      signal — `rzp_test_...` is always Test Mode regardless of KYC status or
+      which dashboard screen it was copied from; only `rzp_live_...` is real.
+- [x] **Switch `PAYPAL_ENVIRONMENT` to `"live"` and add live credentials** —
+      done; `PAYPAL_ENVIRONMENT=live` with real Client ID/Secret is deployed.
+      ⚠️ Checkout still can't complete a PayPal payment yet — PayPal
+      currently rejects order creation with `PAYEE_ACCOUNT_RESTRICTED` (a
+      restriction on the PayPal Business account itself, not a code/config
+      issue). Resolve via PayPal's Resolution Center / merchant support
+      before relying on the PayPal payment path; Razorpay is unaffected and
+      fully live.
 - [x] **Shipping cost logic** — flat ₹99 domestic (India) shipping, free
-      above ₹999 of what the customer is actually paying (subtotal minus
+      above ₹900 of what the customer is actually paying (subtotal minus
       any coupon/launch discount — not the raw pre-discount subtotal, so a
       heavily-discounted small order doesn't get free shipping it wouldn't
       otherwise qualify for). International orders use a zone-based flat rate
@@ -309,18 +356,24 @@ expiry dates or per-customer codes later.
 app/                    Routes (App Router)
   api/                   create-order, verify-payment, newsletter route handlers
   api/paypal/            create-order, capture-order route handlers (PayPal)
+  api/admin/             login, logout, orders (list/detail/update), stats — admin-only
+  admin/                 Password-protected order management (see "Admin dashboard" below)
   shop/[slug]/           Product detail pages
   custom/                Custom builder ("Build Your Own" / "Surprise Me")
   cart/, checkout/, order-confirmation/
 components/             Shared UI (Navbar, Footer, ProductCard, CustomCaseBuilder, icons, etc.)
+  admin/                 AdminShell (nav/logout), OrderStatusBadges
 lib/
   data/products.ts       Local seed/fallback catalog
   supabase/admin.ts       Server-only Supabase client
   products.ts, orders.ts  Data access layer (Supabase w/ seed fallback)
   coupons.ts              Coupon/discount calculation (shared by cart preview + order API)
   razorpay.ts, paypal.ts  Payment provider clients
+  admin-auth.ts           Admin session tokens (HMAC-signed cookie, Edge + Node compatible)
+  admin-format.ts         Client-safe money/date formatting for the admin UI
   email.ts                Confirmation email (Resend)
   store/cart.ts           Zustand cart store (product + custom line items, coupon code)
+middleware.ts            Gates /admin/* and /api/admin/* behind a valid admin session
 supabase/schema.sql      Full SQL schema + seed data for Supabase
 public/products/*.svg    Placeholder product images (swap for real photos)
 ```

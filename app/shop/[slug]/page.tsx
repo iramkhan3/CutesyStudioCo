@@ -8,6 +8,7 @@ import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductGallery } from "@/components/ProductGallery";
 import { JsonLd } from "@/components/JsonLd";
+import { firstImageUrl, isVideoUrl, toAbsoluteUrl } from "@/lib/media";
 
 export const revalidate = 300;
 
@@ -43,7 +44,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description: product.description,
-      images: [{ url: product.images[0] }],
+      images: firstImageUrl(product.images) ? [{ url: firstImageUrl(product.images)! }] : [],
     },
   };
 }
@@ -71,7 +72,7 @@ export default async function ProductPage({
           "@type": "Product",
           name: product.name,
           description: product.description,
-          image: product.images.map((img) => `${SITE.url}${img}`),
+          image: product.images.filter((img) => !isVideoUrl(img)).map((img) => toAbsoluteUrl(img, SITE.url)),
           category: category?.name,
           offers: {
             "@type": "Offer",

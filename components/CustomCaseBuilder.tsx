@@ -9,13 +9,17 @@ import {
   CUSTOM_CASE_THEMES,
   CUSTOM_CASE_WEIGHTS,
   CUSTOM_ORDER_TIMELINE_NOTE,
-  CUSTOM_PRODUCT_TYPES,
   PHONE_MODELS,
+  type CustomProductType,
   type CustomProductTypeSlug,
 } from "@/lib/constants";
 import { getDisplayPricing } from "@/lib/pricing";
 import type { CustomCaseMode } from "@/lib/types";
-import { CartIcon, GiftIcon, WandIcon } from "@/components/Icons";
+import { CartIcon, GiftIcon, MinusIcon, PlusIcon, WandIcon } from "@/components/Icons";
+
+// Made-to-order, not stock-limited — a generous cap just guards against a
+// pathological input, not a real inventory constraint.
+const MAX_CUSTOM_QUANTITY = 20;
 
 const CUSTOM_TYPE_YOUR_OWN = "Type your own";
 const PHONE_OTHER = "My phone isn't listed (type below)";
@@ -56,7 +60,7 @@ function ChipGroup({
   );
 }
 
-export function CustomCaseBuilder() {
+export function CustomCaseBuilder({ customProductTypes }: { customProductTypes: CustomProductType[] }) {
   const addItem = useCartStore((s) => s.addItem);
   const router = useRouter();
 
@@ -72,9 +76,10 @@ export function CustomCaseBuilder() {
   const [customColour, setCustomColour] = useState("");
   const [note, setNote] = useState("");
   const [surpriseNote, setSurpriseNote] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const typeConfig = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === productType)!;
+  const typeConfig = customProductTypes.find((t) => t.slug === productType) ?? customProductTypes[0];
   const pricing = mode === "build" ? typeConfig.build : typeConfig.surprise;
   const buildDisplay = getDisplayPricing(typeConfig.build.mrpInr, typeConfig.build.priceInr);
   const surpriseDisplay = getDisplayPricing(typeConfig.surprise.mrpInr, typeConfig.surprise.priceInr);
@@ -136,10 +141,11 @@ export function CustomCaseBuilder() {
               }
             : { mode, productType, note: surpriseNoteTrimmed },
       },
-      1
+      quantity
     );
 
     setAdded(true);
+    setQuantity(1);
     setTimeout(() => setAdded(false), 1800);
   }
 
@@ -160,7 +166,7 @@ export function CustomCaseBuilder() {
           What are we making?
         </span>
         <div className="flex flex-wrap gap-2">
-          {CUSTOM_PRODUCT_TYPES.map((t) => (
+          {customProductTypes.map((t) => (
             <button
               key={t.slug}
               type="button"
@@ -366,13 +372,39 @@ export function CustomCaseBuilder() {
             </span>
           )}
         </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-ink/70">Quantity</span>
+          <div className="flex items-center gap-3 rounded-full border border-ink/15 px-3 py-1.5">
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+              className="text-ink/70 transition-colors hover:text-pastel disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <MinusIcon className="h-4 w-4" />
+            </button>
+            <span className="w-6 text-center font-heading font-semibold">{quantity}</span>
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              onClick={() => setQuantity((q) => Math.min(MAX_CUSTOM_QUANTITY, q + 1))}
+              disabled={quantity >= MAX_CUSTOM_QUANTITY}
+              className="text-ink/70 transition-colors hover:text-pastel disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           <button
             onClick={handleAddToCart}
             disabled={!canAdd}
             className="btn-secondary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <CartIcon className="h-4 w-4" /> {added ? "Added to Cart!" : "Add to Cart"}
+            <CartIcon className="h-4 w-4" /> {added ? "Added to Cart!" : `Add ${quantity > 1 ? `${quantity} ` : ""}to Cart`}
           </button>
           <button
             onClick={handleBuyNow}

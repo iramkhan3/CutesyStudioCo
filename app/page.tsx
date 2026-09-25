@@ -8,7 +8,9 @@ import { WaveDivider } from "@/components/WaveDivider";
 import { HomeCarousel } from "@/components/HomeCarousel";
 import { SITE } from "@/lib/constants";
 import { getAllProducts } from "@/lib/products";
-import { InstagramIcon, SparkleIcon, WandIcon } from "@/components/Icons";
+import { getCustomProductTypes } from "@/lib/custom-types";
+import { getCoupons } from "@/lib/coupons-data";
+import { InstagramIcon, MailIcon, SparkleIcon, StarIcon, WandIcon } from "@/components/Icons";
 
 const CAROUSEL_SLIDES = [
   { src: "/products/real/rainbow-hello-kitty-case.jpg", alt: "Pastel rainbow Hello Kitty decoden phone case" },
@@ -25,27 +27,27 @@ const CAROUSEL_SLIDES = [
   { src: "/marketing/festive-pouches-duo.jpg", alt: "A Christmas pouch and a Hello Kitty pouch, handmade" },
 ];
 
-const INSTAGRAM_TEASER_IMAGES = [
-  "/marketing/behind-the-scenes.jpg",
-  "/marketing/christmas-magic-limited.jpg",
-  "/marketing/handmade-magic-rainbow.jpg",
-  "/marketing/christmas-dream-case.jpg",
-  "/marketing/one-of-a-kind-collage.jpg",
-  "/marketing/handmade-magic-vibe.jpg",
-];
+const INSTAGRAM_TEASER_IMAGE = "/marketing/one-of-a-kind-real-hands.jpg";
 
 // Revalidate periodically so Supabase-backed product/stock changes show up
 // without a full redeploy, while still being served from cache most of the time.
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const products = await getAllProducts();
-  const featured = products.slice(0, 6);
+  const [products, customProductTypes, coupons] = await Promise.all([
+    getAllProducts(),
+    getCustomProductTypes(),
+    getCoupons(),
+  ]);
+  // Manual admin display order (see /admin/products/reorder) — the top 9 is
+  // the homepage's main highlight, per site design.
+  const highlight = products.slice(0, 9);
+  const autoApplyCoupon = coupons.find((c) => c.autoApply);
 
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-pastel-hero px-4 py-20 sm:py-28">
+      <section id="home" className="relative overflow-hidden bg-pastel-hero px-4 py-20 sm:py-28">
         <DecorativeScatter />
         <div className="relative mx-auto max-w-3xl text-center">
           <span className="pill-tag mx-auto">Made just for you</span>
@@ -60,19 +62,54 @@ export default async function HomePage() {
             cream — one of one, just for you.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/custom" className="btn-primary">
+            <a href="#customize" className="btn-primary">
               <WandIcon className="h-4 w-4" /> Design Your Own
-            </Link>
-            <Link href="/shop" className="btn-secondary">
-              <SparkleIcon className="h-4 w-4" /> Browse Ready to Ship
-            </Link>
+            </a>
+            <a href="#shop" className="btn-secondary">
+              <SparkleIcon className="h-4 w-4" /> Browse Existing Designs
+            </a>
           </div>
         </div>
         <WaveDivider className="text-cream" />
       </section>
 
-      {/* Custom builder — the main event */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+      {/* Shop highlight — the site's main showcase, in admin-controlled order */}
+      <section id="shop" className="mx-auto max-w-7xl scroll-mt-16 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center">
+          <span className="pill-tag mx-auto">Existing Designs</span>
+          <h2 className="section-heading mt-4">Our Favorite Pieces Right Now</h2>
+          <p className="mt-3 max-w-xl text-ink/70">
+            Already finished and sitting in the studio — buy this exact piece
+            and it ships in 1-2 days. Love the design but need a different
+            phone? Every design here can be custom-made for your exact model.
+          </p>
+        </div>
+        {highlight.length > 0 ? (
+          <>
+            <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-3">
+              {highlight.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            <div className="mt-10 text-center">
+              <Link href="/shop" className="btn-secondary">
+                View All Existing Designs
+              </Link>
+            </div>
+          </>
+        ) : (
+          <p className="mt-10 text-center text-ink/60">
+            New pieces are on their way — check back soon, or{" "}
+            <a href="#customize" className="font-semibold text-pastel hover:underline">
+              design your own
+            </a>{" "}
+            in the meantime.
+          </p>
+        )}
+      </section>
+
+      {/* Custom builder */}
+      <section id="customize" className="mx-auto max-w-7xl scroll-mt-16 px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
           <span className="pill-tag mx-auto">Start Here</span>
           <h2 className="section-heading mt-4">Build Your Dream Piece</h2>
@@ -83,7 +120,7 @@ export default async function HomePage() {
           </p>
         </div>
         <div className="mt-10">
-          <CustomCaseBuilder />
+          <CustomCaseBuilder customProductTypes={customProductTypes} />
         </div>
       </section>
 
@@ -104,85 +141,157 @@ export default async function HomePage() {
       </section>
 
       {/* Marketing banner */}
-      <section className="bg-lavender-light px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 md:grid-cols-2">
-          <div className="relative mx-auto aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl3 shadow-softlg">
-            <Image
-              src="/marketing/handmade-magic-rainbow.jpg"
-              alt="Handmade decoden phone case promotional graphic"
-              fill
-              sizes="(min-width: 768px) 33vw, 80vw"
-              className="object-cover"
-            />
+      {autoApplyCoupon && (
+        <section className="bg-lavender-light px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 md:grid-cols-2">
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl3 shadow-softlg">
+              <Image
+                src="/marketing/handmade-magic-rainbow.jpg"
+                alt="Handmade decoden phone case promotional graphic"
+                fill
+                sizes="(min-width: 768px) 33vw, 80vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="text-center md:text-left">
+              <span className="pill-tag">Launch Offer</span>
+              <h2 className="mt-4 font-heading text-3xl font-semibold text-ink sm:text-4xl">
+                Flat {autoApplyCoupon.percentOff}% off, everything
+              </h2>
+              <p className="mt-4 text-ink/70">
+                To celebrate going live, every single piece — ready-to-ship or
+                made to order — is {autoApplyCoupon.percentOff}% off, automatically, no code needed.
+              </p>
+              <a href="#shop" className="btn-primary mt-6 inline-flex">
+                <SparkleIcon className="h-4 w-4" /> Shop the Sale
+              </a>
+            </div>
           </div>
-          <div className="text-center md:text-left">
-            <span className="pill-tag">Launch Offer</span>
-            <h2 className="mt-4 font-heading text-3xl font-semibold text-ink sm:text-4xl">
-              Flat 50% off, everything
-            </h2>
-            <p className="mt-4 text-ink/70">
-              To celebrate going live, every single piece — ready-to-ship or
-              made to order — is 50% off, automatically, no code needed.
-            </p>
-            <Link href="/shop" className="btn-primary mt-6 inline-flex">
-              <SparkleIcon className="h-4 w-4" /> Shop the Sale
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Ready-to-ship — secondary, no-wait option */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center text-center">
-          <span className="pill-tag mx-auto">No Wait Required</span>
-          <h2 className="section-heading mt-4">Or Pick One Ready to Ship</h2>
-          <p className="mt-3 max-w-xl text-ink/70">
-            Don&apos;t want to wait for a custom order? These pieces are
-            already finished and ship in 1-2 days — first come, first served.
+      {/* About */}
+      <section id="about" className="relative scroll-mt-16 overflow-hidden px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="pill-tag mx-auto">Our Story</span>
+          <h2 className="section-heading mt-4">A little studio, a whole lot of cute</h2>
+        </div>
+        <div className="mx-auto mt-10 max-w-3xl space-y-6 text-ink/80">
+          <p>
+            CutesyStudioCo started the way a lot of good things do — with a
+            dream and a life that felt a little too plain. What began as
+            decorating my own case with a couple of cute charms and creamy
+            decoden turned into a passion to transform the world with a dash
+            of joy. Every object that you see daily can make you happy —
+            everything from phone cases and covers, jewelry boxes, mirrors,
+            hairbrushes, tablet stands to trinket boxes.
+          </p>
+          <p>
+            If you&apos;re new to the term: <strong className="text-ink">decoden</strong> is
+            a Japanese decorating style built around rhinestones, cute
+            charms, and swirls of faux cream, layered on until an everyday
+            object looks like it belongs in a dessert shop. It&apos;s fussy, it&apos;s
+            slow, and it is genuinely my favorite way to spend my leisure time.
+          </p>
+          <p>
+            It is made from 100% silicone and is completely safe and
+            enhances strength of the objects. All charms are firmly attached
+            to the silicone and don&apos;t fall off!
+          </p>
+          <p>
+            Every single piece that leaves this studio is made by hand, one
+            at a time — no molds, no mass production, no two pieces exactly
+            alike. I place each charm myself, seal it by hand, and pack it
+            up with as much care as I put into making it.
           </p>
         </div>
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-3">
-          {featured.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        <div className="mt-10 text-center">
-          <Link href="/shop" className="btn-secondary">
-            View All Ready-to-Ship Pieces
-          </Link>
-        </div>
-      </section>
 
-      {/* About teaser */}
-      <section className="relative overflow-hidden bg-lavender-light px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 md:grid-cols-2">
-          <div className="relative aspect-square w-full max-w-sm justify-self-center overflow-hidden rounded-xl3 shadow-softlg md:justify-self-start">
+        <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 items-center gap-10 rounded-xl3 bg-lavender-light p-6 sm:p-10 md:grid-cols-[280px_1fr]">
+          <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-xl3 shadow-softlg">
             <Image
-              src="/products/real/rose-garden-sanrio-case.jpg"
-              alt="Pink and lavender Sanrio-themed decoden phone case, handmade"
+              src="/products/real/charms-in-hand.jpg"
+              alt="A handful of tiny decoden charms, ready to be placed by hand"
               fill
-              sizes="(min-width: 768px) 40vw, 90vw"
+              sizes="280px"
               className="object-cover"
             />
           </div>
           <div>
-            <span className="pill-tag">Our Story</span>
-            <h2 className="mt-4 font-heading text-3xl font-semibold text-ink sm:text-4xl">
-              Made by hand, made with heart
-            </h2>
+            <span className="pill-tag">Meet the Maker</span>
+            <h3 className="mt-4 font-heading text-2xl font-semibold text-ink sm:text-3xl">
+              Hi, I&apos;m Iram 👋
+            </h3>
             <p className="mt-4 text-ink/70">
-              What started as a hobby covering phone cases in luxurious cream
-              and cute charms has grown into a full decoden studio. Every
-              single piece that leaves this table is placed, glued, and
-              sealed by hand — no factories, no shortcuts, just a lot of
-              hardwork and a lot of love.
+              I&apos;m the one-person team behind every piece here — designer,
+              charm-placer, packer, and the person who answers your emails.
+              I&apos;m based in India, obsessed with all things kawaii and
+              pastel, and I built CutesyStudioCo around one simple goal:
+              bringing joy to the world, one cute thing at a time.
             </p>
-            <Link href="/about" className="btn-secondary mt-6 inline-flex">
-              Meet the Maker
-            </Link>
+            <a
+              href={SITE.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-2 font-heading text-sm font-semibold text-pastel hover:text-pastel-dark"
+            >
+              <InstagramIcon className="h-4 w-4" /> Follow the process {SITE.instagramHandle}
+            </a>
           </div>
         </div>
         <WaveDivider className="text-cream" />
+      </section>
+
+      {/* Reviews */}
+      <section id="reviews" className="scroll-mt-16 bg-lavender-light px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="pill-tag mx-auto">Reviews</span>
+          <h2 className="section-heading mt-4">We&apos;re brand new — you could be our first review</h2>
+          <p className="mx-auto mt-4 max-w-md text-ink/70">
+            We&apos;d rather have zero reviews than made-up ones. This section is
+            genuinely empty for now — every review here will be from a real
+            order, not a stock photo of a stranger.
+          </p>
+          <div className="mt-6 flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <StarIcon key={i} className="h-6 w-6 text-ink/15" />
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-ink/60">
+            No ratings yet — be the first to order and tell us what you think.
+          </p>
+
+          <div className="mx-auto mt-10 grid max-w-xl grid-cols-1 gap-6 sm:grid-cols-2">
+            <a
+              href={`mailto:${SITE.email}?subject=My%20CutesyStudioCo%20review`}
+              className="card flex flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
+            >
+              <span className="rounded-full bg-blush-light p-4">
+                <MailIcon className="h-6 w-6 text-pastel" />
+              </span>
+              <h3 className="font-heading font-semibold text-ink">Email Your Review</h3>
+              <p className="text-sm text-ink/60">
+                Already ordered? Send us a few lines (and a photo, if you&apos;d
+                like) and we&apos;ll feature it here with your permission.
+              </p>
+            </a>
+
+            <a
+              href={SITE.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card flex flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
+            >
+              <span className="rounded-full bg-white p-4">
+                <InstagramIcon className="h-6 w-6 text-pastel" />
+              </span>
+              <h3 className="font-heading font-semibold text-ink">Tag Us on Instagram</h3>
+              <p className="text-sm text-ink/60">
+                Post your piece and tag {SITE.instagramHandle} — we regularly
+                share (and love seeing) unboxing photos.
+              </p>
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* Instagram teaser */}
@@ -197,27 +306,22 @@ export default async function HomePage() {
           </div>
           {/* TODO: swap for a real Instagram feed embed (e.g. SnapWidget, Behold.so,
               or the Instagram Basic Display API) once you have an embed key —
-              these are our own promo graphics as a stand-in for now. */}
-          <div className="mt-10 grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-6">
-            {INSTAGRAM_TEASER_IMAGES.map((src, i) => (
-              <a
-                key={src}
-                href={SITE.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative aspect-square overflow-hidden rounded-xl2 shadow-soft transition-transform hover:scale-[1.03]"
-              >
-                <Image
-                  src={src}
-                  alt="CutesyStudioCo Instagram post preview"
-                  fill
-                  sizes="(min-width: 768px) 16vw, 33vw"
-                  className="object-cover"
-                  priority={i === 0}
-                />
-              </a>
-            ))}
-          </div>
+              this is our own promo graphic as a stand-in for now. */}
+          <a
+            href={SITE.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative mx-auto mt-10 block aspect-[2/3] w-full max-w-xs overflow-hidden rounded-xl3 shadow-soft transition-transform hover:scale-[1.02]"
+          >
+            <Image
+              src={INSTAGRAM_TEASER_IMAGE}
+              alt="CutesyStudioCo Instagram post preview"
+              fill
+              sizes="(min-width: 640px) 320px, 80vw"
+              className="object-cover"
+              priority
+            />
+          </a>
           <div className="mt-8 text-center">
             <a
               href={SITE.instagramUrl}
@@ -230,6 +334,47 @@ export default async function HomePage() {
           </div>
         </div>
         <WaveDivider className="text-pastel" />
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="scroll-mt-16 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="pill-tag mx-auto">Say Hello</span>
+          <h2 className="section-heading mt-4">We&apos;d love to hear from you</h2>
+          <p className="mx-auto mt-4 max-w-md text-ink/70">
+            Questions about an order, a custom piece idea, or just want to
+            say hi? Reach out any of these ways — a real person (hi, it&apos;s
+            me) reads every message.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+          <a href={`mailto:${SITE.email}`} className="card flex flex-col items-center gap-3 p-8 text-center">
+            <span className="rounded-full bg-blush-light p-4">
+              <MailIcon className="h-6 w-6 text-pastel" />
+            </span>
+            <h3 className="font-heading font-semibold text-ink">Email Us</h3>
+            <p className="break-all text-sm text-ink/60">{SITE.email}</p>
+          </a>
+
+          <a
+            href={SITE.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card flex flex-col items-center gap-3 p-8 text-center"
+          >
+            <span className="rounded-full bg-lavender-light p-4">
+              <InstagramIcon className="h-6 w-6 text-pastel" />
+            </span>
+            <h3 className="font-heading font-semibold text-ink">Instagram</h3>
+            <p className="text-sm text-ink/60">{SITE.instagramHandle}</p>
+          </a>
+        </div>
+
+        <p className="mx-auto mt-8 max-w-xl text-center text-sm text-ink/60">
+          We typically reply within 1-2 business days. For order-specific
+          questions, please include your order number if you have one.
+        </p>
       </section>
 
       {/* Email signup */}

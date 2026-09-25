@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPaypalConfig, getPaypalAccessToken } from "@/lib/paypal";
 import { getOrderById, markOrderFailed, markOrderPaidPaypal, decrementStock } from "@/lib/orders";
-import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -130,6 +130,9 @@ export async function POST(req: Request) {
     );
     await sendOrderConfirmationEmail(paidOrder).catch((err) =>
       console.error("[paypal/capture-order] confirmation email failed:", err)
+    );
+    await sendAdminNewOrderNotification(paidOrder).catch((err) =>
+      console.error("[paypal/capture-order] admin notification email failed:", err)
     );
 
     return NextResponse.json({ success: true, orderId: paidOrder.id });

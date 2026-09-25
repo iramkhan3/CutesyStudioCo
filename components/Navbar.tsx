@@ -4,17 +4,22 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LAUNCH_OFFER_ACTIVE, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 import { useCartStore, cartItemCount } from "@/lib/store/cart";
+import { useCoupons } from "@/lib/hooks/useCoupons";
 import { CartIcon, CloseIcon, InstagramIcon, MenuIcon } from "@/components/Icons";
 
+// Most of the site lives as sections on the homepage — these are anchor
+// links (Link handles `/#id` by navigating home, then the browser jumps to
+// the section). The Shop page itself (full catalog + pagination) and every
+// product/cart/checkout page still exist as their own separate routes.
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/custom", label: "Customize" },
-  { href: "/shop", label: "Ready to Ship" },
-  { href: "/reviews", label: "Reviews" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "/#customize", label: "Customize" },
+  { href: "/#shop", label: "Existing Designs" },
+  { href: "/#reviews", label: "Reviews" },
+  { href: "/#about", label: "About" },
+  { href: "/#contact", label: "Contact" },
 ];
 
 export function Navbar() {
@@ -22,12 +27,14 @@ export function Navbar() {
   const pathname = usePathname();
   const items = useCartStore((s) => s.items);
   const count = cartItemCount(items);
+  const coupons = useCoupons();
+  const autoApplyCoupon = coupons.find((c) => c.autoApply);
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/5 bg-cream/90 backdrop-blur-md">
-      {LAUNCH_OFFER_ACTIVE && (
+      {autoApplyCoupon && (
         <div className="bg-gradient-to-r from-pastel-dark to-pastel px-4 py-2 text-center font-heading text-xs font-semibold text-white sm:text-sm">
-          🎉 Launch Offer — Flat 50% Off Everything, No Code Needed!
+          🎉 Launch Offer — Flat {autoApplyCoupon.percentOff}% Off Everything, No Code Needed!
         </div>
       )}
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
@@ -48,7 +55,7 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               className={`font-heading text-sm font-medium transition-colors hover:text-pastel ${
-                pathname === link.href ? "text-pastel" : "text-ink/80"
+                link.href === "/" && pathname === "/" ? "text-pastel" : "text-ink/80"
               }`}
             >
               {link.label}
@@ -99,7 +106,7 @@ export function Navbar() {
                 href={link.href}
                 onClick={() => setOpen(false)}
                 className={`rounded-xl px-3 py-2 font-heading text-sm font-medium ${
-                  pathname === link.href ? "bg-blush-light text-pastel" : "text-ink/80"
+                  link.href === "/" && pathname === "/" ? "bg-blush-light text-pastel" : "text-ink/80"
                 }`}
               >
                 {link.label}

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
+import { useCoupons } from "@/lib/hooks/useCoupons";
 import { calculateShipping } from "@/lib/shipping";
 import { CUSTOM_ORDER_TIMELINE_NOTE, FREE_SHIPPING_THRESHOLD_INR } from "@/lib/constants";
 import { GiftIcon, MinusIcon, PlusIcon, SparkleIcon, TrashIcon, WandIcon } from "@/components/Icons";
@@ -20,8 +21,9 @@ export default function CartPage() {
   const [couponInput, setCouponInput] = useState("");
   const [showCouponInput, setShowCouponInput] = useState(false);
 
+  const coupons = useCoupons();
   const subtotalInr = cartSubtotalInr(items);
-  const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode);
+  const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode, coupons);
   const payableInr = Math.max(0, subtotalInr - discount);
   const shippingInr = calculateShipping(payableInr);
   const totalInr = payableInr + shippingInr;

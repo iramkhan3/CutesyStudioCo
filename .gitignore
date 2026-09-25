@@ -35,3 +35,16 @@ next-env.d.ts
 
 # local tooling
 .claude/
+
+# raw pre-conversion source media (HEIC/MOV originals, reference shots) —
+# huge and never meant to ship; public/products/all/ has the converted,
+# web-ready versions that actually get served.
+/public/products/_heic_originals/
+/public/products/_mov_originals/
+/public/products/_reference/
+
+# Supabase CLI local cache
+/supabase/.temp/
+
+# stray local artifacts — never commit session/auth tokens
+admin_cookie.tmp.txt

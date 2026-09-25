@@ -3,19 +3,30 @@ import { getProductsByIds } from "@/lib/products";
 import { getPaypalConfig, getPaypalAccessToken } from "@/lib/paypal";
 import { createPendingOrder, attachPaypalOrderId } from "@/lib/orders";
 import { calculateDiscount } from "@/lib/coupons";
+import { getCoupons } from "@/lib/coupons-data";
 import { calculateShippingUsd } from "@/lib/shipping";
-import { CUSTOM_PRODUCT_TYPES } from "@/lib/constants";
+import { getCustomProductTypes } from "@/lib/custom-types";
+import { PHONE_CASE_CATEGORIES } from "@/lib/constants";
+import type { CustomProductType } from "@/lib/constants";
+import { firstImageUrl } from "@/lib/media";
 import type { CustomCaseSelection, OrderItemSnapshot, ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(\+?\d{1,3}[\s-]?)?\d{7,12}$/;
-const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
+// India uses a strict 6-digit PIN (no leading 0) — checkable precisely.
+// International postal codes vary too widely in format for a tight check.
+const INDIA_PINCODE_RE = /^[1-9]\d{5}$/;
+const GENERIC_POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
 const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,80}$/u;
 
+function isValidPostalCode(value: string, country: string): boolean {
+  return country === "India" ? INDIA_PINCODE_RE.test(value) : GENERIC_POSTAL_CODE_RE.test(value);
+}
+
 type RequestItem =
-  | { kind: "product"; productId: string; quantity: number }
+  | { kind: "product"; productId: string; quantity: number; phoneModel?: string }
   | { kind: "custom"; name: string; image: string; customization: CustomCaseSelection; quantity: number };
 
 type RequestBody = {
@@ -28,10 +39,10 @@ type RequestBody = {
 // Kept in sync with app/api/create-order/route.ts's isValidCustomization —
 // same validation rules, just re-declared here so this route doesn't depend
 // on the Razorpay route module.
-function isValidCustomization(c: unknown): c is CustomCaseSelection {
+function isValidCustomization(c: unknown, customTypes: CustomProductType[]): c is CustomCaseSelection {
   if (!c || typeof c !== "object") return false;
   const custom = c as CustomCaseSelection;
-  const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === custom.productType);
+  const type = customTypes.find((t) => t.slug === custom.productType);
   if (!type) return false;
 
   if (custom.mode === "surprise") {
@@ -64,6 +75,7 @@ export async function POST(req: Request) {
   }
 
   const { items, couponCode, customer, shippingAddress } = body;
+  const customTypes = await getCustomProductTypes();
 
   // --- basic input validation (identical to the Razorpay route) ---------
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -86,7 +98,10 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json({ error: "Please complete your shipping address." }, { status: 400 });
   }
-  if (!shippingAddress?.postalCode?.trim() || !POSTAL_CODE_RE.test(shippingAddress.postalCode.trim())) {
+  if (
+    !shippingAddress?.postalCode?.trim() ||
+    !isValidPostalCode(shippingAddress.postalCode.trim(), shippingAddress.country.trim())
+  ) {
     return NextResponse.json({ error: "Please provide a valid postal code." }, { status: 400 });
   }
   for (const item of items) {
@@ -96,7 +111,7 @@ export async function POST(req: Request) {
     if (item.kind === "product" && !item.productId) {
       return NextResponse.json({ error: "Invalid item in cart." }, { status: 400 });
     }
-    if (item.kind === "custom" && !isValidCustomization(item.customization)) {
+    if (item.kind === "custom" && !isValidCustomization(item.customization, customTypes)) {
       return NextResponse.json({ error: "Your custom case is missing some details." }, { status: 400 });
     }
   }
@@ -128,17 +143,24 @@ export async function POST(req: Request) {
           { status: 503 }
         );
       }
+      if (PHONE_CASE_CATEGORIES.includes(product.category) && !item.phoneModel?.trim()) {
+        return NextResponse.json(
+          { error: `Please select a phone model for "${product.name}".` },
+          { status: 400 }
+        );
+      }
       orderItems.push({
         kind: "product",
         productId: product.id,
         slug: product.slug,
         name: product.name,
-        image: product.images[0],
+        image: firstImageUrl(product.images) ?? "",
         unitPriceInr: product.price_usd,
         quantity: item.quantity,
+        phoneModel: item.phoneModel?.trim() || undefined,
       });
     } else {
-      const type = CUSTOM_PRODUCT_TYPES.find((t) => t.slug === item.customization.productType)!;
+      const type = customTypes.find((t) => t.slug === item.customization.productType)!;
       const unitPriceUsd =
         item.customization.mode === "surprise" ? type.surprise.priceUsd : type.build.priceUsd;
       orderItems.push({
@@ -159,9 +181,15 @@ export async function POST(req: Request) {
   // passed in, so it works fine against a USD subtotal too. The one caveat:
   // CUTEJOY30's minPurchaseInr (₹500) is an INR-denominated threshold and
   // isn't converted here — a manually-entered coupon's minimum purchase gate
-  // may behave oddly for USD orders. The sitewide auto-applied LAUNCH50 has
-  // no minimum, so the site's actual current discount is unaffected.
-  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode);
+  // may behave oddly for USD orders.
+  //
+  // Auto-applied coupons (currently the LAUNCH50 launch offer) are excluded
+  // entirely for PayPal/USD orders — that promo is a domestic (INR) launch
+  // incentive only, not meant for international buyers. Filtering it out of
+  // the list passed to calculateDiscount blocks both the auto-apply and a
+  // customer manually typing the same code.
+  const coupons = (await getCoupons()).filter((c) => !c.autoApply);
+  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode, coupons);
   if (couponCode && couponCode.trim() && !coupon) {
     return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
   }

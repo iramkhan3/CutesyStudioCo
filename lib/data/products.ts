@@ -22,6 +22,12 @@ export type Product = {
   images: string[];
   stock_quantity: number;
   active: boolean;
+  // Only present on rows read from Supabase (the DB default's populated at
+  // insert time) — absent on the local SEED_PRODUCTS fallback array.
+  created_at?: string;
+  // Manual homepage/shop display order (admin drag-to-reorder). Optional —
+  // absent until supabase/schema.sql's sort_order migration is re-run.
+  sort_order?: number;
 };
 
 /**

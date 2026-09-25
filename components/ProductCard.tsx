@@ -3,24 +3,28 @@ import Link from "next/link";
 import type { Product } from "@/lib/data/products";
 import { CATEGORIES } from "@/lib/constants";
 import { getDisplayPricing } from "@/lib/pricing";
+import { firstImageUrl, displayThumbnailUrl } from "@/lib/media";
 import { QuickAddButton } from "@/components/QuickAddButton";
 
 export function ProductCard({ product }: { product: Product }) {
   const category = CATEGORIES.find((c) => c.slug === product.category);
   const { mrpInr, priceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
+  const rawCardImage = firstImageUrl(product.images);
+  const cardImage = rawCardImage ? displayThumbnailUrl(rawCardImage) : undefined;
 
   return (
     <div className="card group flex flex-col overflow-hidden hover:rotate-1">
       <Link href={`/shop/${product.slug}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-blush-light">
-          {/* TODO: swap this placeholder SVG for a real product photo via next/image */}
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+          {cardImage && (
+            <Image
+              src={cardImage}
+              alt={product.name}
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          )}
         </div>
       </Link>
 

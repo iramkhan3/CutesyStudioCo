@@ -86,10 +86,10 @@ export const CATEGORIES = [
   },
   {
     slug: "ready-to-ship",
-    name: "Ready to Ship",
-    tagline: "Already made, ready to fly to you",
+    name: "Existing Designs",
+    tagline: "Already made — or recreated just for your phone",
     description:
-      "Pieces already finished and sitting in the studio — no made-to-order wait, ships in 1-2 days.",
+      "Pieces already finished and sitting in the studio, ready to fly to you in 1-2 days. Love a design but it's shown on a different phone? Every design here can be made for your exact model — just customize it.",
   },
 ] as const;
 
@@ -228,6 +228,12 @@ export const CUSTOM_PRODUCT_TYPES: CustomProductType[] = [
   },
 ];
 
+// Product categories whose items are phone-case-shaped — checkout requires a
+// phone model for any cart item in one of these (see CartLineItem.category),
+// since every design can be recreated for a different model than the one
+// physically shown/photographed.
+export const PHONE_CASE_CATEGORIES: readonly string[] = ["phone-cases", "ready-to-ship"];
+
 // TODO: this is a representative list of phones commonly sold in India, not
 // an exhaustive live catalog — add/remove models here as needed. "Type your
 // own" is always offered as a fallback so no customer is blocked from ordering.
@@ -289,9 +295,15 @@ export const CUSTOM_CASE_THEMES = [
   "Hello Kitty",
   "Pompompurin",
   "Pochacco",
-  "Flowers",
   "Pearls",
-  "Type your own",
+  "Space",
+  "Music",
+  "Toy Story",
+  "Stitch",
+  "Flowers",
+  "Hearts",
+  "Christmas",
+  "Tasty Treats",
 ] as const;
 
 export const CUSTOM_CASE_STYLES = [
@@ -324,17 +336,19 @@ export type Coupon = {
   code: string;
   percentOff: number;
   minPurchaseInr: number;
+  // Coupon can still be looked up/entered manually even when inactive is
+  // false... no: `active: false` disables it entirely (manual entry fails).
+  active: boolean;
+  // At most one active, autoApply coupon should exist at a time — it's
+  // applied automatically with no code needed. See lib/coupons.ts.
+  autoApply: boolean;
 };
 
-// TODO: move this to a database table if you ever need more than a couple of
-// always-on codes (seasonal codes, per-customer codes, expiry dates, etc.).
+// Fallback used until supabase/schema.sql's `coupons` table migration is run
+// (see lib/coupons-data.ts) — same values as before, just reshaped so
+// on/off (`active`) and auto-apply are per-coupon flags the admin can edit,
+// instead of a separate LAUNCH_OFFER_ACTIVE constant.
 export const COUPONS: Record<string, Coupon> = {
-  CUTEJOY30: { code: "CUTEJOY30", percentOff: 30, minPurchaseInr: 500 },
-  LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0 },
+  CUTEJOY30: { code: "CUTEJOY30", percentOff: 30, minPurchaseInr: 500, active: true, autoApply: false },
+  LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0, active: true, autoApply: true },
 };
-
-// Site-wide launch offer — automatically applied to every order with no code
-// needed, no minimum purchase. Flip to false (or delete) once the launch
-// promo period ends; existing coupon codes keep working either way.
-export const LAUNCH_OFFER_ACTIVE = true;
-export const AUTO_APPLY_COUPON_CODE = "LAUNCH50";

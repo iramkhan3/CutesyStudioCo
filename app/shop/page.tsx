@@ -48,7 +48,7 @@ export default async function ShopPage({
       </div>
 
       <Link
-        href="/custom"
+        href="/#customize"
         className="card mx-auto mt-10 flex max-w-xl items-center gap-4 p-5 text-left transition-transform hover:-translate-y-0.5"
       >
         <span className="rounded-full bg-blush-light p-3">

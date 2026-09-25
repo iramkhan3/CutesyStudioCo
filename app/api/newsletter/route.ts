@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getCoupons } from "@/lib/coupons-data";
+import { sendNewsletterWelcomeEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -26,13 +28,30 @@ export async function POST(req: Request) {
     );
   }
 
-  const { error } = await supabase
+  // ignoreDuplicates means an already-subscribed email is a silent no-op
+  // (Postgres ON CONFLICT DO NOTHING) — `.select()` lets us tell that apart
+  // from a genuine new signup by whether a row actually came back, so a
+  // repeat submission of the same address doesn't re-trigger a welcome email.
+  const { data, error } = await supabase
     .from("subscribers")
-    .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+    .upsert({ email }, { onConflict: "email", ignoreDuplicates: true })
+    .select();
 
   if (error) {
     console.error("[newsletter] Supabase error:", error);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+
+  if (data && data.length > 0) {
+    // A manually-entered discount code (not the sitewide auto-apply launch
+    // offer, which is a domestic-only incentive — see
+    // app/api/paypal/create-order) works for anyone, so it's fine to feature
+    // here without knowing the subscriber's country. Best-effort: a stalled
+    // Resend call must never fail this signup.
+    const coupon = (await getCoupons()).find((c) => !c.autoApply) ?? null;
+    await sendNewsletterWelcomeEmail(email, coupon ? { code: coupon.code, percentOff: coupon.percentOff } : null).catch(
+      (err) => console.error("[newsletter] welcome email failed:", err)
+    );
   }
 
   return NextResponse.json({ success: true });

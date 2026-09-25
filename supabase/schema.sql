@@ -37,6 +37,11 @@ create table if not exists products (
 -- pricing column) picks up the new column without dropping your data.
 alter table products add column if not exists mrp_inr numeric(10, 2) not null default 0;
 alter table products add column if not exists price_usd numeric(10, 2) not null default 0;
+-- Manual display order for the storefront (admin drag-to-reorder). Lower
+-- sorts first; ties break by created_at. Default 0 means "unordered" — new
+-- products land at the end until explicitly placed.
+alter table products add column if not exists sort_order integer not null default 0;
+create index if not exists products_sort_order_idx on products (sort_order, created_at);
 
 alter table products enable row level security;
 
@@ -79,11 +84,226 @@ alter table orders add constraint orders_payment_provider_check
 alter table orders add column if not exists paypal_order_id text;
 alter table orders add column if not exists paypal_capture_id text;
 
+-- Fulfillment tracking (admin dashboard) — separate from payment_status.
+-- payment_status tracks money; fulfillment_status tracks the physical
+-- shipment, and only becomes meaningful once payment_status = 'paid'.
+alter table orders add column if not exists fulfillment_status text not null default 'unfulfilled';
+alter table orders drop constraint if exists orders_fulfillment_status_check;
+alter table orders add constraint orders_fulfillment_status_check
+  check (fulfillment_status in ('unfulfilled', 'shipped', 'delivered', 'cancelled'));
+alter table orders add column if not exists tracking_number text;
+alter table orders add column if not exists courier text;
+alter table orders add column if not exists admin_notes text;
+
 alter table orders enable row level security;
 
 create index if not exists orders_razorpay_order_id_idx on orders (razorpay_order_id);
 create index if not exists orders_paypal_order_id_idx on orders (paypal_order_id);
 create index if not exists orders_email_idx on orders (email);
+create index if not exists orders_created_at_idx on orders (created_at desc);
+create index if not exists orders_fulfillment_status_idx on orders (fulfillment_status);
+
+-- ---------------------------------------------------------------------------
+-- custom_product_types — pricing/config for the "Build Your Own" / "Surprise
+-- Me" custom builder (lib/constants.ts CUSTOM_PRODUCT_TYPES is the fallback
+-- when this table is empty/missing, so the builder never breaks). Structural
+-- fields (which types exist, requires_phone_model) stay admin-editable per
+-- row, but adding a brand-new type still needs a code change (the builder's
+-- UI options are keyed to known slugs).
+-- ---------------------------------------------------------------------------
+create table if not exists custom_product_types (
+  slug text primary key,
+  name text not null,
+  requires_phone_model boolean not null default false,
+  image text not null,
+  build_mrp_inr numeric(10, 2) not null,
+  build_price_inr numeric(10, 2) not null,
+  build_price_usd numeric(10, 2) not null,
+  surprise_mrp_inr numeric(10, 2) not null,
+  surprise_price_inr numeric(10, 2) not null,
+  surprise_price_usd numeric(10, 2) not null,
+  sort_order integer not null default 0
+);
+
+alter table custom_product_types enable row level security;
+
+insert into custom_product_types
+  (slug, name, requires_phone_model, image, build_mrp_inr, build_price_inr, build_price_usd, surprise_mrp_inr, surprise_price_inr, surprise_price_usd, sort_order)
+values
+  ('phone-case', 'Phone Case', true, '/products/real/pink-hello-kitty-case.jpg', 1999, 1000, 12.05, 1799, 900, 10.84, 1),
+  ('hairbrush', 'Hairbrush', false, '/products/real/sugar-bow-comb.jpg', 1199, 600, 7.23, 1099, 550, 6.63, 2),
+  ('hand-mirror', 'Hand Mirror', false, '/products/real/bubblegum-bow-mirror-1.jpg', 699, 350, 4.22, 649, 325, 3.92, 3),
+  ('table-mirror', 'Table Mirror', false, '/products/real/bow-heart-mirror.jpg', 699, 350, 4.22, 649, 325, 3.92, 4),
+  ('keychain', 'Keychain', false, '/products/real/sweetheart-keychain-duo.jpg', 599, 300, 3.61, 549, 275, 3.31, 5)
+on conflict (slug) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- coupons — admin-editable. `active: false` disables a code entirely (manual
+-- entry and auto-apply both stop working); `auto_apply: true` means it's
+-- applied automatically with no code needed (at most one such row should be
+-- active at a time — lib/coupons.ts picks the first match if more than one
+-- somehow is). This replaces the old separate LAUNCH_OFFER_ACTIVE /
+-- AUTO_APPLY_COUPON_CODE constants with per-row flags.
+-- ---------------------------------------------------------------------------
+create table if not exists coupons (
+  code text primary key,
+  percent_off numeric(5, 2) not null,
+  min_purchase_inr numeric(10, 2) not null default 0,
+  active boolean not null default true,
+  auto_apply boolean not null default false
+);
+
+alter table coupons enable row level security;
+
+insert into coupons (code, percent_off, min_purchase_inr, active, auto_apply)
+values
+  ('CUTEJOY30', 30, 500, true, false),
+  ('LAUNCH50', 50, 0, true, true)
+on conflict (code) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- email_templates — admin-editable transactional emails (lib/email.ts sends
+-- through these; DEFAULT_EMAIL_TEMPLATES in lib/email-templates.ts is the
+-- fallback if this table is missing/empty, or if an individual key's row is
+-- missing). `active: false` turns that one email off entirely.
+-- ---------------------------------------------------------------------------
+create table if not exists email_templates (
+  key text primary key,
+  name text not null,
+  subject text not null,
+  html text not null,
+  active boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
+alter table email_templates enable row level security;
+
+insert into email_templates (key, name, subject, html, active) values
+(
+  'order_confirmation',
+  'Order confirmation',
+  $subj$Your {{site_name}} order is confirmed 🎀$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Thank you for your order! 🎀</h1>
+  <p>Hi {{customer_name}}, your order has been received and is being lovingly prepared.</p>
+  <p><strong>Order #{{order_id}}</strong> &middot; {{order_date}}</p>
+  <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+    {{items_table}}
+    {{discount_row}}
+    {{shipping_row}}
+    <tr>
+      <td style="padding-top:12px; font-weight:bold;">Total</td>
+      <td style="padding-top:12px; font-weight:bold; text-align:right;">{{total}}</td>
+    </tr>
+  </table>
+  <p><strong>Shipping to:</strong><br/>{{shipping_address}}</p>
+  <p>We'll email you again once your order ships. If you have any questions, just reply to this email or reach us at {{site_email}}.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'order_shipped',
+  'Order shipped',
+  $subj$Your {{site_name}} order has shipped! 📦$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Your order is on its way! 📦</h1>
+  <p>Hi {{customer_name}}, your order <strong>#{{order_id}}</strong> has shipped and is headed your way.</p>
+  {{tracking_row}}
+  <p><strong>Shipping to:</strong><br/>{{shipping_address}}</p>
+  <p>We'll let you know once it's delivered too. Questions? Just reply to this email or reach us at {{site_email}}.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'order_delivered',
+  'Order delivered',
+  $subj$Your {{site_name}} order has arrived! 🎀$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Your order has arrived! 🎀</h1>
+  <p>Hi {{customer_name}}, order <strong>#{{order_id}}</strong> has been marked delivered — we hope it made your day a little cuter!</p>
+  <p>If anything about your order isn't right, just reply to this email or reach us at {{site_email}} and we'll sort it out.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'order_cancelled',
+  'Order cancelled',
+  $subj$Your {{site_name}} order was cancelled$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Your order was cancelled</h1>
+  <p>Hi {{customer_name}}, order <strong>#{{order_id}}</strong> has been cancelled.</p>
+  <p>If you didn't expect this or have any questions, just reply to this email or reach us at {{site_email}}.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'admin_new_order',
+  'Admin: new order notification',
+  $subj$🎀 New order from {{customer_name}} — {{total}}$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">New order! 🎀</h1>
+  <p><strong>{{customer_name}}</strong> just placed order #{{order_id}} for <strong>{{total}}</strong>.</p>
+  <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+    {{items_table}}
+    {{discount_row}}
+    {{shipping_row}}
+    <tr>
+      <td style="padding-top:12px; font-weight:bold;">Total</td>
+      <td style="padding-top:12px; font-weight:bold; text-align:right;">{{total}}</td>
+    </tr>
+  </table>
+  <p><strong>Ship to:</strong><br/>{{shipping_address}}</p>
+  <p><a href="{{admin_order_link}}" style="color:#D291BC;">View in admin dashboard &rarr;</a></p>
+</div>$html$,
+  true
+),
+(
+  'newsletter_welcome',
+  'Newsletter: welcome',
+  $subj$Welcome to {{site_name}}! 🎀$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">You're on the list! 🎀</h1>
+  <p>Hi there, thanks for joining the {{site_name}} newsletter — you'll be first to hear about new drops, restocks, and sneak peeks before anyone else.</p>
+  {{discount_row}}
+  <p><a href="{{shop_link}}" style="color:#D291BC;">Browse the shop &rarr;</a></p>
+  <p>Questions any time? Just reply to this email or reach us at {{site_email}}.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+)
+on conflict (key) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- category_order — admin-configurable category display priority (which
+-- category shows first on the Shop page and in the homepage highlight).
+-- CATEGORIES' declared array order in lib/constants.ts (phone-cases first)
+-- is the fallback if this table is missing/empty — see
+-- lib/category-order-data.ts. Within a category, products.sort_order (the
+-- existing drag-reorder feature) still controls which pieces show first.
+-- ---------------------------------------------------------------------------
+create table if not exists category_order (
+  slug text primary key,
+  rank integer not null
+);
+
+alter table category_order enable row level security;
+
+insert into category_order (slug, rank) values
+  ('phone-cases', 0),
+  ('tablet-cases', 1),
+  ('tablet-holders', 2),
+  ('jewelry-boxes', 3),
+  ('makeup-boxes', 4),
+  ('combs', 5),
+  ('mirrors', 6),
+  ('keychains', 7),
+  ('posters', 8),
+  ('ready-to-ship', 9)
+on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- subscribers (homepage email signup)

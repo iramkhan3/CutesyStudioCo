@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "@/components/Icons";
+import { isVideoUrl } from "@/lib/media";
 
 export function ProductGallery({ images, alt }: { images: string[]; alt: string }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -33,37 +34,60 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setLightboxOpen(true)}
-        aria-label="View larger image"
-        className="relative block aspect-square w-full cursor-zoom-in overflow-hidden rounded-xl3 bg-blush-light shadow-soft"
-      >
-        <Image
-          src={images[activeIndex]}
-          alt={alt}
-          fill
-          sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-cover"
-          priority
-        />
-      </button>
+      {isVideoUrl(images[activeIndex]) ? (
+        <div className="relative aspect-square w-full overflow-hidden rounded-xl3 bg-blush-light shadow-soft">
+          <video src={images[activeIndex]} controls playsInline className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          aria-label="View larger image"
+          className="relative block aspect-square w-full cursor-zoom-in overflow-hidden rounded-xl3 bg-blush-light shadow-soft"
+        >
+          <Image
+            src={images[activeIndex]}
+            alt={alt}
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover"
+            priority
+          />
+        </button>
+      )}
 
       {images.length > 1 && (
         <div className="mt-3 flex gap-2">
-          {images.map((src, i) => (
-            <button
-              key={src}
-              type="button"
-              onClick={() => setActiveIndex(i)}
-              aria-label={`Show image ${i + 1} of ${images.length}`}
-              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl2 bg-blush-light transition-opacity ${
-                i === activeIndex ? "ring-2 ring-pastel" : "opacity-70 hover:opacity-100"
-              }`}
-            >
-              <Image src={src} alt="" fill sizes="64px" className="object-cover" />
-            </button>
-          ))}
+          {images.map((src, i) =>
+            isVideoUrl(src) ? (
+              <button
+                key={src}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                aria-label={`Show video ${i + 1} of ${images.length}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl2 bg-blush-light transition-opacity ${
+                  i === activeIndex ? "ring-2 ring-pastel" : "opacity-70 hover:opacity-100"
+                }`}
+              >
+                <video src={src} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                <span className="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 text-[8px] font-bold uppercase text-white">
+                  Video
+                </span>
+              </button>
+            ) : (
+              <button
+                key={src}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                aria-label={`Show image ${i + 1} of ${images.length}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl2 bg-blush-light transition-opacity ${
+                  i === activeIndex ? "ring-2 ring-pastel" : "opacity-70 hover:opacity-100"
+                }`}
+              >
+                <Image src={src} alt="" fill sizes="64px" className="object-cover" />
+              </button>
+            )
+          )}
         </div>
       )}
 
@@ -76,7 +100,7 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
             type="button"
             onClick={() => setLightboxOpen(false)}
             aria-label="Close"
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
           >
             <CloseIcon className="h-6 w-6" />
           </button>
@@ -90,7 +114,7 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
                   showPrev();
                 }}
                 aria-label="Previous image"
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:left-4"
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:left-4"
               >
                 <ChevronLeftIcon className="h-6 w-6" />
               </button>
@@ -101,7 +125,7 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
                   showNext();
                 }}
                 aria-label="Next image"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:right-4"
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:right-4"
               >
                 <ChevronRightIcon className="h-6 w-6" />
               </button>
@@ -109,16 +133,20 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
           )}
 
           <div
-            className="relative h-[85vh] w-full max-w-3xl"
+            className="relative z-0 h-[85vh] w-full max-w-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
-              src={images[activeIndex]}
-              alt={alt}
-              fill
-              sizes="100vw"
-              className="object-contain"
-            />
+            {isVideoUrl(images[activeIndex]) ? (
+              <video src={images[activeIndex]} controls playsInline autoPlay className="h-full w-full object-contain" />
+            ) : (
+              <Image
+                src={images[activeIndex]}
+                alt={alt}
+                fill
+                sizes="100vw"
+                className="object-contain"
+              />
+            )}
           </div>
 
           {images.length > 1 && (
