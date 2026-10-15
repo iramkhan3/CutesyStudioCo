@@ -95,7 +95,7 @@ export default function CartPage() {
               {item.kind === "custom" && (
                 <p className="mt-1 max-w-xs truncate text-xs text-ink/50">
                   {item.customization.mode === "build"
-                    ? `${item.customization.phoneModel} · ${item.customization.theme}`
+                    ? [item.customization.phoneModel, item.customization.theme].filter(Boolean).join(" · ")
                     : item.customization.note}
                 </p>
               )}

@@ -7,6 +7,19 @@ import { useStore } from "@/components/StoreProvider";
 
 type Category = { slug: string; name: string; fromInr: number | null };
 
+// Only categories where a device model or size genuinely matters get an
+// extra field — everything else just uses the description box.
+const DETAIL_FIELDS: Record<string, { label: string; placeholder: string; required?: boolean }> = {
+  "phone-cases": { label: "Phone model", placeholder: "e.g. iPhone 15 Pro", required: true },
+  "tablet-cases": { label: "Tablet model (optional)", placeholder: "e.g. iPad 10th gen" },
+  "tablet-holders": { label: "Tablet / phone model (optional)", placeholder: "e.g. iPad Air" },
+  "earbuds-cases": { label: "Earbuds model (optional)", placeholder: "e.g. AirPods Pro 2" },
+  "laptop-kindle-sleeves": { label: "Device & size (optional)", placeholder: 'e.g. 13" MacBook Air, Kindle Paperwhite' },
+  "water-bottles": { label: "Bottle size (optional)", placeholder: "e.g. 750 ml" },
+  posters: { label: "Size (optional)", placeholder: "e.g. A4, A3, postcard" },
+  "photo-frames": { label: "Photo size (optional)", placeholder: "e.g. 4×6" },
+};
+
 const inputClass =
   "mt-1 w-full rounded-xl2 border border-ink/15 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-pastel";
 
@@ -18,7 +31,7 @@ const inputClass =
 export function CustomRequestForm({ categories, initialCategory }: { categories: Category[]; initialCategory?: string }) {
   const { settings, countries: COUNTRIES, whatsappLink } = useStore();
   const [category, setCategory] = useState(
-    categories.some((c) => c.slug === initialCategory) ? initialCategory! : categories[0]?.slug ?? ""
+    categories.some((c) => c.slug === initialCategory) ? initialCategory! : ""
   );
   const [quantity, setQuantity] = useState("1");
   const [deviceModel, setDeviceModel] = useState("");
@@ -33,7 +46,7 @@ export function CustomRequestForm({ categories, initialCategory }: { categories:
   const [submittedId, setSubmittedId] = useState<string | null>(null);
 
   const selected = categories.find((c) => c.slug === category);
-  const isPhoneCase = category === "phone-cases";
+  const detailField = DETAIL_FIELDS[category];
   const notesLength = notes.trim().length;
 
   async function handleSubmit(e: FormEvent) {
@@ -94,7 +107,18 @@ export function CustomRequestForm({ categories, initialCategory }: { categories:
       <div>
         <label className="block text-sm font-semibold text-ink">
           What would you like made?
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass} required>
+          <select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setDeviceModel(""); // a phone model shouldn't ride along onto a hair clip
+            }}
+            className={inputClass}
+            required
+          >
+            <option value="" disabled>
+              Choose a category…
+            </option>
             {categories.map((c) => (
               <option key={c.slug} value={c.slug}>
                 {c.name}
@@ -103,13 +127,15 @@ export function CustomRequestForm({ categories, initialCategory }: { categories:
           </select>
         </label>
         <p className="mt-1.5 text-xs text-ink/60">
-          {selected?.fromInr != null
+          {!selected
+            ? "Pick a category to see starting prices."
+            : selected.fromInr != null
             ? `Starting from ₹${selected.fromInr.toLocaleString("en-IN")} each (~$${Math.ceil(selected.fromInr / settings.shipping.usdInrRate)}) — the final price depends on your design.`
             : "Price is quoted after we review your request."}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[120px_1fr]">
+      <div className={`grid grid-cols-1 gap-4 ${detailField ? "sm:grid-cols-[120px_1fr]" : "sm:grid-cols-[120px]"}`}>
         <label className="block text-sm font-semibold text-ink">
           Quantity
           <input
@@ -122,17 +148,19 @@ export function CustomRequestForm({ categories, initialCategory }: { categories:
             required
           />
         </label>
-        <label className="block text-sm font-semibold text-ink">
-          {isPhoneCase ? "Phone model" : "Model / size (if relevant)"}
-          <input
-            value={deviceModel}
-            onChange={(e) => setDeviceModel(e.target.value)}
-            placeholder={isPhoneCase ? "e.g. iPhone 15 Pro" : "e.g. 750 ml bottle, A4 poster, 13\" laptop"}
-            className={inputClass}
-            required={isPhoneCase}
-            maxLength={120}
-          />
-        </label>
+        {detailField && (
+          <label className="block text-sm font-semibold text-ink">
+            {detailField.label}
+            <input
+              value={deviceModel}
+              onChange={(e) => setDeviceModel(e.target.value)}
+              placeholder={detailField.placeholder}
+              className={inputClass}
+              required={detailField.required}
+              maxLength={120}
+            />
+          </label>
+        )}
       </div>
 
       <label className="block text-sm font-semibold text-ink">
