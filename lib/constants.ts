@@ -65,10 +65,10 @@ export const CATEGORIES = [
   },
   {
     slug: "combs",
-    name: "Combs",
+    name: "Hairbrushes",
     tagline: "Detangling, but make it decoden",
     description:
-      "Smooth, gentle-tooth combs with handles transformed into tiny charm gardens — the cutest thing in your bag by far.",
+      "Smooth, gentle hairbrushes with handles transformed into tiny charm gardens — the cutest thing in your bag by far.",
   },
   {
     slug: "mirrors",
