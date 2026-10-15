@@ -12,6 +12,8 @@ import { useCoupons } from "@/lib/hooks/useCoupons";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
 import { PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE } from "@/lib/constants";
 import { useStore } from "@/components/StoreProvider";
+import { useCartSync } from "@/lib/hooks/useCartSync";
+import { CartSyncNotice } from "@/components/CartSyncNotice";
 import { formatUsdApprox } from "@/lib/pricing";
 import { ChevronLeftIcon, GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
@@ -159,6 +161,7 @@ export default function CheckoutPage() {
   }, [leadKey]);
 
   const coupons = useCoupons();
+  const syncNotices = useCartSync();
   const { settings, countries: COUNTRIES } = useStore();
   const usdRate = settings.shipping.usdInrRate;
   // The LAUNCH50 launch offer (auto-applied, no code needed) is a domestic
@@ -388,6 +391,7 @@ export default function CheckoutPage() {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-24 text-center">
         <SparkleIcon className="h-10 w-10 text-lavender-dark" />
+        <CartSyncNotice notices={syncNotices} />
         <h1 className="mt-4 font-heading text-2xl font-bold text-ink">Your cart is empty</h1>
         <p className="mt-2 text-ink/60">Add something cute before checking out.</p>
         <Link href="/shop" className="btn-primary mt-6">
@@ -413,6 +417,7 @@ export default function CheckoutPage() {
         </Link>
       </div>
       <h1 className="font-heading text-3xl font-bold text-ink sm:text-4xl">Checkout</h1>
+      <CartSyncNotice notices={syncNotices} />
 
       {hasCustomItem && (
         <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">

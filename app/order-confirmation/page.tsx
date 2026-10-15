@@ -70,6 +70,8 @@ export default async function OrderConfirmationPage({
                   <p className="text-xs text-ink/50">
                     {item.customization.mode === "build"
                       ? [item.customization.phoneModel, item.customization.theme].filter(Boolean).join(" · ")
+                      : item.customization.mode === "request"
+                      ? "Made just for you"
                       : "Surprise Me"}
                   </p>
                 )}

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-17 — Bug sweep: coupons, stale carts, custom request labels
+
+No database changes.
+
+### Added
+
+- **Coupon codes on custom request payments** (`/pay/<token>`): the customer
+  can type a code; it's re-validated server-side (minimum purchase, shipping
+  override). Auto-apply offers such as LAUNCH50 never apply to a quote.
+- **Cart refresh** (`POST /api/cart`, `useCartSync`): the cart and checkout
+  pages update the saved browser cart on load — current prices, names,
+  images and categories; quantities capped to stock; sold-out, hidden or
+  deleted items removed — and tell the shopper what changed.
+
+### Fixed
+
+- **Launch banner flashing then disappearing**: the page showed built-in
+  coupon defaults until the live list loaded. Coupons are now rendered with
+  the page (`getDisplayCoupons`, refreshed instantly when a coupon is saved).
+- **Switching every coupon off re-enabled LAUNCH50 (50% off)**: an empty
+  coupon table fell back to the built-in defaults. It now falls back only
+  when the table can't be read.
+- **Custom request form asked for a phone model for any category**: it no
+  longer preselects Phone Cases; the extra field only appears where a model
+  or size matters.
+- Cart/confirmation showed "undefined · Theme" for custom non-phone items;
+  confirmation labelled paid custom requests "Surprise Me"; admin orders
+  labelled a request's size "Phone model".
+- Checkout could demand a phone model with no field to enter it (stale cart
+  category) — fixed by the cart refresh.
+
 ## 2026-10-16 — Made to Order, payment hardening, review alerts, earlier cart recovery
 
 ### ⚠️ After deploying

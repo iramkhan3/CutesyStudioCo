@@ -8,7 +8,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
 import { StoreProvider } from "@/components/StoreProvider";
-import { getStoreSettings } from "@/lib/settings";
+import { getDisplayCoupons, getStoreSettings } from "@/lib/settings";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const settings = await getStoreSettings();
+  const [settings, coupons] = await Promise.all([getStoreSettings(), getDisplayCoupons()]);
   return (
     <html lang="en" className={`${fredoka.variable} ${nunito.variable}`}>
       <body className="flex min-h-screen flex-col">
@@ -93,7 +93,7 @@ export default async function RootLayout({
             areaServed: "IN",
           }}
         />
-        <StoreProvider settings={settings}>
+        <StoreProvider settings={settings} coupons={coupons}>
           <NavigationTracker />
           <Navbar />
           <main className="flex-1">{children}</main>

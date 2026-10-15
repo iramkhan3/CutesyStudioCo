@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateConfig } from "@/lib/settings";
 import { adminCreateCoupon, adminListCoupons, validateCouponInput, type CouponInput } from "@/lib/admin-coupons";
 
 export const runtime = "nodejs";
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  revalidatePath("/");
+  revalidateConfig();
 
   return NextResponse.json({ coupon: result }, { status: 201 });
 }

@@ -5,6 +5,8 @@ import { attachPaypalOrderId, attachRazorpayOrderId, createPendingOrder, markOrd
 import { attachOrderToCustomRequest, categoryName, getCustomRequestByToken } from "@/lib/custom-requests";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
 import { getStoreSettings } from "@/lib/settings";
+import { calculateDiscount } from "@/lib/coupons";
+import { getCoupons } from "@/lib/coupons-data";
 import type { OrderItemSnapshot, ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -15,14 +17,16 @@ export const fetchCache = "force-no-store";
 const INDIA_PINCODE_RE = /^[1-9]\d{5}$/;
 const GENERIC_POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\s-]{2,9}$/;
 
-type Body = { provider?: unknown; shippingAddress?: Partial<ShippingAddress> };
+type Body = { provider?: unknown; shippingAddress?: Partial<ShippingAddress>; couponCode?: unknown };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Starts payment for an APPROVED custom request: creates a normal pending
  * order priced from the maker's quote (never from the client) + standard
- * shipping for the address, then a Razorpay or PayPal order for it. The
+ * shipping for the address (minus an optional coupon the customer types —
+ * never an auto-applied one, since the quote is already a personal price),
+ * then a Razorpay or PayPal order for it. The
  * response matches /api/create-order and /api/paypal/create-order, so the
  * existing /api/verify-payment and /api/paypal/capture-order finish the job
  * (and they mark the request paid via markCustomRequestPaidForOrder).
@@ -69,10 +73,26 @@ export async function POST(req: Request, { params }: { params: { token: string }
   }
 
   const subtotal = isUsd ? request.quoted_price_usd! : request.quoted_price_inr;
+  const couponCode = typeof body.couponCode === "string" ? body.couponCode.trim().slice(0, 40) : "";
+  const [allCoupons, { shipping: shippingConfig }] = await Promise.all([getCoupons(), getStoreSettings()]);
+  const { discount, coupon, error: couponError } = calculateDiscount(
+    subtotal,
+    couponCode || null,
+    allCoupons.filter((c) => !c.autoApply),
+    isUsd ? subtotal * shippingConfig.usdInrRate : subtotal
+  );
+  if (couponCode && !coupon) {
+    return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
+  }
+  const payable = round2(Math.max(0, subtotal - discount));
   const shipping = isUsd
-    ? calculateShippingUsd(subtotal, shippingAddress.country, null, (await getStoreSettings()).shipping)
-    : calculateShipping(subtotal, shippingAddress.country, null, (await getStoreSettings()).shipping);
-  const total = round2(subtotal + shipping);
+    ? calculateShippingUsd(payable, shippingAddress.country, coupon, shippingConfig)
+    : calculateShipping(payable, shippingAddress.country, coupon, shippingConfig);
+  const total = round2(payable + shipping);
+  // Razorpay's minimum is ₹1; keep PayPal at $1 too.
+  if (total < 1) {
+    return NextResponse.json({ error: "Order total is below the minimum payable amount." }, { status: 400 });
+  }
 
   const item: OrderItemSnapshot = {
     kind: "custom",
@@ -100,8 +120,8 @@ export async function POST(req: Request, { params }: { params: { token: string }
     shippingAddress,
     items: [item],
     subtotal,
-    couponCode: null,
-    discountAmount: 0,
+    couponCode: coupon?.code ?? null,
+    discountAmount: discount,
     shippingAmount: shipping,
     totalAmount: total,
     currency: isUsd ? "USD" : "INR",

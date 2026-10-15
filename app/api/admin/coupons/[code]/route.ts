@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateConfig } from "@/lib/settings";
 import { adminDeleteCoupon, adminUpdateCoupon, validateCouponInput, type CouponInput } from "@/lib/admin-coupons";
 
 export const runtime = "nodejs";
@@ -30,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: { code: string }
   // Cart/checkout/navbar read coupons via a force-dynamic API fetch (never
   // cached) — only the homepage's server-rendered launch banner text needs
   // an explicit revalidate.
-  revalidatePath("/");
+  revalidateConfig();
 
   return NextResponse.json({ coupon: result });
 }
@@ -39,7 +39,7 @@ export async function DELETE(_req: Request, { params }: { params: { code: string
   const ok = await adminDeleteCoupon(params.code);
   if (!ok) return NextResponse.json({ error: "Failed to delete coupon." }, { status: 400 });
 
-  revalidatePath("/");
+  revalidateConfig();
 
   return NextResponse.json({ ok: true });
 }

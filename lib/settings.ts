@@ -2,6 +2,7 @@ import "server-only";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { CATEGORIES } from "@/lib/constants";
+import { getCoupons } from "@/lib/coupons-data";
 import {
   mergeHomepage,
   mergeStoreSettings,
@@ -31,6 +32,16 @@ const fetchSetting = async (key: string): Promise<unknown> => {
   if (error) return null; // e.g. table not migrated yet → defaults
   return data?.value ?? null;
 };
+
+/**
+ * Active coupons for page rendering only (launch banner, cart preview) —
+ * cached like the other admin config and refreshed instantly when a coupon
+ * is saved. Order routes keep calling the uncached getCoupons().
+ */
+export const getDisplayCoupons = unstable_cache(async () => getCoupons(), ["display-coupons"], {
+  tags: [CONFIG_TAG],
+  revalidate: 600,
+});
 
 export const getStoreSettings = unstable_cache(
   async (): Promise<StoreSettings> => mergeStoreSettings(await fetchSetting("store")),

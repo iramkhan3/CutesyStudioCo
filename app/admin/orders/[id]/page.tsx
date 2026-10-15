@@ -137,7 +137,12 @@ export default function AdminOrderDetailPage() {
                       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ink-light">
                         <Row label="Type" value={item.customization.productType} />
                         <Row label="Mode" value={item.customization.mode} />
-                        {item.customization.phoneModel && <Row label="Phone model" value={item.customization.phoneModel} />}
+                        {item.customization.phoneModel && (
+                          <Row
+                            label={item.customization.mode === "request" ? "Model / size" : "Phone model"}
+                            value={item.customization.phoneModel}
+                          />
+                        )}
                         {item.customization.theme && <Row label="Theme" value={item.customization.theme} />}
                         {item.customization.style && <Row label="Style" value={item.customization.style} />}
                         {item.customization.weight && <Row label="Weight" value={item.customization.weight} />}

@@ -36,6 +36,9 @@ export async function getCoupons(): Promise<Coupon[]> {
   if (!supabase) return Object.values(COUPONS).filter((c) => c.active);
 
   const { data, error } = await supabase.from("coupons").select("*").eq("active", true);
-  if (error || !data || data.length === 0) return Object.values(COUPONS).filter((c) => c.active);
+  // Fall back only when the table itself is unreadable. An empty result means
+  // the admin switched every coupon off — that must mean "no coupons", never
+  // "use the built-in defaults" (which would quietly re-enable LAUNCH50).
+  if (error || !data) return Object.values(COUPONS).filter((c) => c.active);
   return (data as CouponRow[]).map(rowToCoupon);
 }

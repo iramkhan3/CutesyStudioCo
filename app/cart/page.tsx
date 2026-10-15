@@ -10,6 +10,8 @@ import { calculateShipping } from "@/lib/shipping";
 import { useStore } from "@/components/StoreProvider";
 import { GiftIcon, MinusIcon, PlusIcon, SparkleIcon, TrashIcon, WandIcon } from "@/components/Icons";
 import { BackButton } from "@/components/BackButton";
+import { useCartSync } from "@/lib/hooks/useCartSync";
+import { CartSyncNotice } from "@/components/CartSyncNotice";
 
 export default function CartPage() {
   const items = useCartStore((s) => s.items);
@@ -23,6 +25,7 @@ export default function CartPage() {
   const [showCouponInput, setShowCouponInput] = useState(false);
 
   const coupons = useCoupons();
+  const syncNotices = useCartSync();
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode, coupons);
   const payableInr = Math.max(0, subtotalInr - discount);
@@ -41,6 +44,7 @@ export default function CartPage() {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-24 text-center">
         <SparkleIcon className="h-10 w-10 text-lavender-dark" />
+        <CartSyncNotice notices={syncNotices} />
         <h1 className="mt-4 font-heading text-2xl font-bold text-ink">Your cart is empty</h1>
         <p className="mt-2 text-ink/60">
           Nothing here yet — go find something covered in cute charms and decoden cream.
@@ -58,6 +62,7 @@ export default function CartPage() {
         <BackButton fallbackHref="/shop" label="Continue shopping" />
       </div>
       <h1 className="font-heading text-3xl font-bold text-ink sm:text-4xl">Your Cart</h1>
+      <CartSyncNotice notices={syncNotices} />
 
       {hasCustomItem && (
         <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">

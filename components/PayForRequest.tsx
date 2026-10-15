@@ -7,6 +7,8 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { SITE } from "@/lib/constants";
 import { useStore } from "@/components/StoreProvider";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
+import { calculateDiscount } from "@/lib/coupons";
+import { useCoupons } from "@/lib/hooks/useCoupons";
 
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
@@ -53,13 +55,33 @@ export function PayForRequest({ token, customerName, email, phone, defaultCountr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingOrderIdRef = useRef<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponCode, setCouponCode] = useState<string | null>(null);
 
+  // Only codes the customer types — the launch offer never auto-applies to a
+  // quoted price. The server re-checks everything (custom-requests/.../pay).
+  const coupons = useCoupons().filter((c) => !c.autoApply);
   const usd = method === "paypal" && priceUsd != null;
-  const shipping = usd
-    ? calculateShippingUsd(priceUsd!, address.country, null, settings.shipping)
-    : calculateShipping(priceInr, address.country, null, settings.shipping);
   const subtotal = usd ? priceUsd! : priceInr;
-  const total = Math.round((subtotal + shipping) * 100) / 100;
+  const { discount, coupon, error: couponError } = calculateDiscount(
+    subtotal,
+    couponCode,
+    coupons,
+    usd ? subtotal * settings.shipping.usdInrRate : subtotal
+  );
+  const payable = Math.round(Math.max(0, subtotal - discount) * 100) / 100;
+  const shipping = usd
+    ? calculateShippingUsd(payable, address.country, coupon, settings.shipping)
+    : calculateShipping(payable, address.country, coupon, settings.shipping);
+  const total = Math.round((payable + shipping) * 100) / 100;
+
+  function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponCode(code);
+    setCouponInput("");
+    setError(null);
+  }
   const fmt = (n: number) => (usd ? `$${n.toFixed(2)}` : `₹${n.toFixed(2)}`);
 
   function addressComplete(): boolean {
@@ -75,7 +97,7 @@ export function PayForRequest({ token, customerName, email, phone, defaultCountr
     const res = await fetch(`/api/custom-requests/${token}/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, shippingAddress: address }),
+      body: JSON.stringify({ provider, shippingAddress: address, couponCode: coupon?.code ?? null }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Couldn't start the payment. Please try again.");
@@ -236,11 +258,56 @@ export function PayForRequest({ token, customerName, email, phone, defaultCountr
         )}
       </div>
 
-      <dl className="mt-6 space-y-1 rounded-xl2 bg-blush-light/50 p-4 text-sm">
+      <div className="mt-6">
+        {couponCode ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl2 border border-ink/10 bg-white px-4 py-2.5 text-sm">
+            <span className={coupon ? "font-semibold text-pastel-dark" : "text-red-700"}>
+              {coupon ? `🎉 ${coupon.code} applied` : couponError}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCouponCode(null)}
+              className="shrink-0 font-semibold text-ink/60 hover:text-pastel"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <label className="block text-sm font-semibold text-ink">
+            Coupon code (optional)
+            <div className="mt-1 flex gap-2">
+              <input
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyCoupon();
+                  }
+                }}
+                placeholder="Enter code"
+                className={`${inputClass.replace("mt-1 ", "")} uppercase`}
+                maxLength={40}
+              />
+              <button type="button" onClick={applyCoupon} className="btn-secondary shrink-0 px-5">
+                Apply
+              </button>
+            </div>
+          </label>
+        )}
+      </div>
+
+      <dl className="mt-4 space-y-1 rounded-xl2 bg-blush-light/50 p-4 text-sm">
         <div className="flex justify-between">
           <dt className="text-ink/70">Your custom piece (quoted)</dt>
           <dd className="text-ink">{fmt(subtotal)}</dd>
         </div>
+        {discount > 0 && coupon && (
+          <div className="flex justify-between text-pastel-dark">
+            <dt>Discount ({coupon.code})</dt>
+            <dd>-{fmt(discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-ink/70">Shipping to {address.country}</dt>
           <dd className="text-ink">{shipping === 0 ? "Free" : fmt(shipping)}</dd>
@@ -268,7 +335,7 @@ export function PayForRequest({ token, customerName, email, phone, defaultCountr
               <PayPalButtons
                 style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                 disabled={loading}
-                forceReRender={[address.country, total]}
+                forceReRender={[address.country, total, coupon?.code]}
                 createOrder={paypalCreateOrder}
                 onApprove={paypalApprove}
                 onCancel={() => setLoading(false)}
