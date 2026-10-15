@@ -386,6 +386,62 @@ insert into email_templates (key, name, subject, html, active) values
   <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
 </div>$html$,
   true
+),
+(
+  'custom_request_received',
+  'Custom request: received (to customer)',
+  $subj$We got your custom request 🎀 (#{{request_id}})$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Thank you for your request! 🎀</h1>
+  <p>Hi {{customer_name}}, we've received your custom request <strong>#{{request_id}}</strong> and will review it personally.</p>
+  {{request_details}}
+  <p>We'll email you within 1-2 days with a price, or with any questions. Nothing is charged until you approve the price and pay.</p>
+  <p>Have reference photos? <a href="{{whatsapp_link}}" style="color:#D291BC;">Send them on WhatsApp</a> with your request number.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'custom_request_approved',
+  'Custom request: approved (to customer)',
+  $subj$Your custom request is approved! 🎀 (#{{request_id}})$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Good news — we can make it! 🎀</h1>
+  <p>Hi {{customer_name}}, your custom request <strong>#{{request_id}}</strong> has been approved.</p>
+  {{admin_message_block}}
+  {{request_details}}
+  <p style="font-size:18px;"><strong>Price: {{quoted_price}}</strong> <span style="color:#9B8589;">(+ shipping, calculated at payment)</span></p>
+  <p style="text-align:center; margin:24px 0;"><a href="{{payment_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Pay &amp; confirm my order</a></p>
+  <p>We start making your piece as soon as payment is confirmed. Questions? Just reply to this email or <a href="{{whatsapp_link}}" style="color:#D291BC;">message us on WhatsApp</a>.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'custom_request_rejected',
+  'Custom request: not possible (to customer)',
+  $subj$About your custom request (#{{request_id}})$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Thank you for thinking of us 💕</h1>
+  <p>Hi {{customer_name}}, thank you so much for your custom request <strong>#{{request_id}}</strong>. After looking at it carefully, we're sorry to say we aren't able to take it on this time.</p>
+  {{admin_message_block}}
+  <p>We'd still love to make something for you — have a look at our <a href="{{shop_link}}" style="color:#D291BC;">ready-made designs</a>, or reply to this email if you'd like to adjust your request.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'admin_custom_request',
+  'Admin: new custom request',
+  $subj$🎀 New custom request from {{customer_name}} — {{category_name}}$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">New custom request 🎀</h1>
+  <p><strong>{{customer_name}}</strong> ({{customer_email}}, {{customer_phone}}, {{customer_country}}) requested a custom <strong>{{category_name}}</strong>.</p>
+  {{request_details}}
+  <p><a href="{{admin_request_link}}" style="color:#D291BC;">Review &amp; approve or reject in the admin dashboard &rarr;</a></p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
 )
 on conflict (key) do nothing;
 
@@ -406,6 +462,10 @@ create table if not exists category_order (
 -- are hidden from the storefront along with all their products, and those
 -- products can't be checked out. Products themselves are left untouched.
 alter table category_order add column if not exists enabled boolean not null default true;
+-- "Starting from" price shown on the custom request form for this category,
+-- and pre-filled as the quote when approving a request. null = "price on
+-- request". Edited in Admin → Categories.
+alter table category_order add column if not exists custom_from_inr numeric(10, 2);
 
 alter table category_order enable row level security;
 
@@ -435,6 +495,43 @@ insert into category_order (slug, rank) values
   ('laptop-kindle-sleeves', 22),
   ('bulk-gifting', 23)
 on conflict (slug) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- custom_requests — "request a custom piece" for any category. Flow:
+-- customer submits (pending) → admin approves with a quoted total price, or
+-- rejects with a polite message → on approval the customer pays via the
+-- private /pay/<token> link, which creates a normal order (order_id) and the
+-- request becomes paid. See lib/custom-requests.ts.
+-- ---------------------------------------------------------------------------
+create table if not exists custom_requests (
+  id uuid primary key default gen_random_uuid(),
+  -- Unguessable secret in the customer's payment link (/pay/<token>).
+  token text unique not null,
+  category text not null,
+  quantity integer not null default 1 check (quantity between 1 and 500),
+  device_model text,
+  notes text not null,
+  customer_name text not null,
+  email text not null,
+  phone text not null,
+  country text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected', 'paid')),
+  -- Total for the whole request (all units), excluding shipping.
+  quoted_price_inr numeric(10, 2),
+  quoted_price_usd numeric(10, 2),
+  -- Optional note from the maker, included in the approval/rejection email.
+  admin_message text,
+  decided_at timestamptz,
+  -- The order created when the customer goes to pay (latest attempt).
+  order_id uuid references orders(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists custom_requests_status_idx on custom_requests (status, created_at desc);
+create index if not exists custom_requests_order_id_idx on custom_requests (order_id);
+
+alter table custom_requests enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- subscribers (homepage email signup)

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-16 — Custom requests for every category
+
+### ⚠️ After deploying
+
+Re-run [supabase/schema.sql](supabase/schema.sql) (safe, additive). It adds
+the `custom_requests` table, `category_order.custom_from_inr`, and four email
+templates. Then set "Custom from ₹" prices in **Admin → Categories** (optional —
+blank shows "price on request").
+
+### Added
+
+- **Request a custom piece** (`/custom-request`) for any enabled category:
+  notes, quantity, model/size, contact + country. No payment upfront.
+- **Admin → Requests**: approve with a quoted ₹/$ total (pre-filled from the
+  category's starting price × quantity) and optional note, or decline politely.
+- **Emails**: request received (customer), new request (admin), approved with
+  payment link, polite decline — all editable in Admin → Emails.
+- **Private payment page** `/pay/<token>`: address + shipping + Razorpay/PayPal,
+  priced server-side from the quote; reuses the existing payment verification
+  and marks the request paid.
+- "Custom from ₹" per category in Admin → Categories.
+- Links: navbar "Custom Request", footer, homepage custom section, shop page.
+- The existing pay-now custom builder (5 types) is unchanged.
+
+### Verified (2026-10-15, live)
+
+- PayPal end-to-end up to payment approval on production: live order creation,
+  FREE4UCUTIE = $1.00 international, stock reservation + second-buyer block,
+  no-coupon US total $31.31 ($7.23 + $24.08 shipping). Razorpay tested manually
+  by the owner.
+
 ## 2026-10-15
 
 ### ⚠️ After deploying

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getOrderByRazorpayOrderId, markOrderPaid, decrementStock } from "@/lib/orders";
+import { markCustomRequestPaidForOrder } from "@/lib/custom-requests";
 import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -86,6 +87,9 @@ export async function POST(req: Request) {
     await Promise.allSettled([
       decrementStock(result.order).catch((err) =>
         console.error("[webhooks/razorpay] stock decrement failed:", err)
+      ),
+      markCustomRequestPaidForOrder(result.order.id).catch((err) =>
+        console.error("[webhooks/razorpay] custom request update failed:", err)
       ),
       sendOrderConfirmationEmail(result.order).catch((err) =>
         console.error("[webhooks/razorpay] confirmation email failed:", err)

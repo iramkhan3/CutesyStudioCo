@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPaypalConfig, getPaypalAccessToken } from "@/lib/paypal";
 import { getOrderById, markOrderFailed, markOrderPaidPaypal, decrementStock } from "@/lib/orders";
+import { markCustomRequestPaidForOrder } from "@/lib/custom-requests";
 import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -127,6 +128,9 @@ export async function POST(req: Request) {
     // so neither of these should block the success response to the customer.
     await decrementStock(paidOrder).catch((err) =>
       console.error("[paypal/capture-order] stock decrement failed:", err)
+    );
+    await markCustomRequestPaidForOrder(paidOrder.id).catch((err) =>
+      console.error("[paypal/capture-order] custom request update failed:", err)
     );
     await sendOrderConfirmationEmail(paidOrder).catch((err) =>
       console.error("[paypal/capture-order] confirmation email failed:", err)

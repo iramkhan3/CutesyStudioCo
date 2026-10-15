@@ -7,7 +7,32 @@ export type ShippingAddress = {
   country: string;
 };
 
-export type CustomCaseMode = "build" | "surprise";
+// "request" = an approved custom request (any category) being paid for via
+// /pay/<token> — never addable to the cart; see lib/custom-requests.ts.
+export type CustomCaseMode = "build" | "surprise" | "request";
+
+export type CustomRequestStatus = "pending" | "approved" | "rejected" | "paid";
+
+export type CustomRequest = {
+  id: string;
+  token: string;
+  category: string;
+  quantity: number;
+  device_model: string | null;
+  notes: string;
+  customer_name: string;
+  email: string;
+  phone: string;
+  country: string;
+  status: CustomRequestStatus;
+  // Total for all units, excluding shipping. Set on approval.
+  quoted_price_inr: number | null;
+  quoted_price_usd: number | null;
+  admin_message: string | null;
+  decided_at: string | null;
+  order_id: string | null;
+  created_at: string;
+};
 
 export type CustomCaseSelection = {
   mode: CustomCaseMode;

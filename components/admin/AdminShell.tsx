@@ -47,6 +47,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <nav className="flex items-center gap-2">
             {navLink("/admin", "Dashboard")}
             {navLink("/admin/orders", "Orders")}
+            {navLink("/admin/requests", "Requests")}
             {navLink("/admin/products", "Products")}
             {navLink("/admin/custom-types", "Custom Pricing")}
             {navLink("/admin/coupons", "Coupons")}

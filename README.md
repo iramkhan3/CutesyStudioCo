@@ -240,6 +240,45 @@ directly in `CUSTOM_PRODUCT_TYPES`. Pricing is never trusted from the client —
 full selection (or the surprise note) is stored per-order in `orders.items`
 as JSON so you can see exactly what was requested.
 
+## Custom requests (`/custom-request`) — any category, quote before payment
+
+Separate from the pay-now builder above (which stays as-is for its 5 types).
+Customers can request a custom piece in **any enabled category** (except
+"Existing Designs"), and nothing is charged until the maker approves a price:
+
+1. **Request** — `/custom-request` (linked from the navbar, footer, homepage
+   custom section, and the shop page, pre-selecting the active category).
+   Category, quantity (1–500), model/size (required for phone cases), notes
+   (20–2000 chars), name, email, phone/WhatsApp, country. A hidden honeypot
+   field drops bot submissions; one email can have at most 5 requests awaiting
+   review. Saved to `custom_requests` as `pending`.
+   Emails: **custom_request_received** → customer, **admin_custom_request** → shop.
+2. **Review** — **Admin → Requests** lists them (filter: needs review /
+   approved / paid / rejected / all). On a request:
+   - **Approve**: enter the **total** price for all pieces, excluding shipping,
+     in ₹ and $ ($ is used if they pay with PayPal), plus an optional note.
+     Pre-filled from the category's **"Custom from ₹"** price (Admin →
+     Categories) × quantity, and a suggested $ at `USD_INR_RATE`. Sends
+     **custom_request_approved** with the price and a private payment link
+     (`/pay/<token>`). While unpaid you can change the quote and re-send.
+   - **Decline**: sends **custom_request_rejected** — a warm, pre-written
+     "we can't take this on" email; the note box comes pre-filled with a
+     polite reason you can edit or clear.
+3. **Pay** — `/pay/<token>` (unguessable token, `noindex`) shows the request
+   and quote, collects the shipping address, adds shipping by the normal rules,
+   and pays via Razorpay (₹) or PayPal ($). `/api/custom-requests/<token>/pay`
+   builds the order **server-side from the quote** (one `custom` line item,
+   `mode: "request"`), then the existing `/api/verify-payment`,
+   Razorpay webhook, and `/api/paypal/capture-order` finish it and mark the
+   request `paid` (`markCustomRequestPaidForOrder`). The paid order appears in
+   Admin → Orders with the usual confirmation + new-order emails. Coupons don't
+   apply to quotes.
+
+All four emails are editable in **Admin → Emails** (preview/test-send use a
+sample request). Code: [lib/custom-requests.ts](lib/custom-requests.ts),
+[components/CustomRequestForm.tsx](components/CustomRequestForm.tsx),
+[components/PayForRequest.tsx](components/PayForRequest.tsx).
+
 ## Ready-to-ship inventory (secondary — `/shop`)
 
 The everything-else section: pieces already made and sitting in the studio,

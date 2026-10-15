@@ -3,8 +3,8 @@
 // DEFAULT_EMAIL_TEMPLATES are plain static data the admin editor (a client
 // component) reads directly for its sidebar + "reset to default" button,
 // same pattern as CATEGORIES/CUSTOM_CASE_THEMES in lib/constants.ts.
-import type { OrderRecord } from "@/lib/types";
-import { SITE, whatsappLink } from "@/lib/constants";
+import type { CustomRequest, OrderRecord } from "@/lib/types";
+import { CATEGORIES, SITE, whatsappLink } from "@/lib/constants";
 
 export type EmailTemplateKey =
   | "order_confirmation"
@@ -13,7 +13,11 @@ export type EmailTemplateKey =
   | "order_cancelled"
   | "admin_new_order"
   | "newsletter_welcome"
-  | "abandoned_cart";
+  | "abandoned_cart"
+  | "custom_request_received"
+  | "custom_request_approved"
+  | "custom_request_rejected"
+  | "admin_custom_request";
 
 export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "order_confirmation",
@@ -23,6 +27,18 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "admin_new_order",
   "newsletter_welcome",
   "abandoned_cart",
+  "custom_request_received",
+  "custom_request_approved",
+  "custom_request_rejected",
+  "admin_custom_request",
+];
+
+/** Templates rendered with buildRequestVars (custom requests), not order vars. */
+export const REQUEST_TEMPLATE_KEYS: EmailTemplateKey[] = [
+  "custom_request_received",
+  "custom_request_approved",
+  "custom_request_rejected",
+  "admin_custom_request",
 ];
 
 export type EmailTemplate = {
@@ -63,6 +79,30 @@ const ABANDONED_CART_VARS = [
   { token: "whatsapp_link", description: "Link to chat with you on WhatsApp." },
 ] as const;
 
+const REQUEST_VARS = [
+  { token: "site_name", description: "Your shop's name." },
+  { token: "site_email", description: "Your support email address." },
+  { token: "customer_name", description: "The customer's full name." },
+  { token: "request_id", description: "Short request reference (first 8 characters)." },
+  { token: "category_name", description: "The category they asked for." },
+  { token: "request_details", description: "Box with category, quantity, model/size, and their notes." },
+  { token: "whatsapp_link", description: "Link to chat with you on WhatsApp." },
+  { token: "shop_link", description: "Link to the shop page." },
+] as const;
+
+const REQUEST_DECISION_VARS = [
+  { token: "quoted_price", description: "Your quoted total (₹, and $ for international customers)." },
+  { token: "payment_link", description: "Private link where the customer pays for the approved request." },
+  { token: "admin_message_block", description: "Your note to the customer (blank if you didn't write one)." },
+] as const;
+
+const ADMIN_REQUEST_VARS = [
+  { token: "customer_email", description: "Customer's email." },
+  { token: "customer_phone", description: "Customer's phone." },
+  { token: "customer_country", description: "Customer's country." },
+  { token: "admin_request_link", description: "Direct link to the request in your admin dashboard." },
+] as const;
+
 const ADMIN_VARS = [
   { token: "admin_order_link", description: "Direct link to this order in your admin dashboard." },
 ] as const;
@@ -82,6 +122,10 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKey, readonly { token
   admin_new_order: [...BASE_VARS, ...ADMIN_VARS],
   newsletter_welcome: NEWSLETTER_VARS,
   abandoned_cart: [...BASE_VARS, ...ABANDONED_CART_VARS],
+  custom_request_received: REQUEST_VARS,
+  custom_request_approved: [...REQUEST_VARS, ...REQUEST_DECISION_VARS],
+  custom_request_rejected: [...REQUEST_VARS, ...REQUEST_DECISION_VARS],
+  admin_custom_request: [...REQUEST_VARS, ...ADMIN_REQUEST_VARS],
 };
 
 const EMAIL_WRAPPER_OPEN = `<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">`;
@@ -200,6 +244,62 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
       <p>Most of our pieces are one-of-a-kind, so once they're gone, they're gone!</p>
       <p style="text-align:center; margin:24px 0;"><a href="{{resume_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Finish my order</a></p>
       <p>Had trouble paying, or have a question? <a href="{{whatsapp_link}}" style="color:#D291BC;">Message us on WhatsApp</a> or just reply to this email.</p>
+      ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  custom_request_received: {
+    key: "custom_request_received",
+    name: "Custom request: received (to customer)",
+    subject: "We got your custom request 🎀 (#{{request_id}})",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">Thank you for your request! 🎀</h1>
+      <p>Hi {{customer_name}}, we've received your custom request <strong>#{{request_id}}</strong> and will review it personally.</p>
+      {{request_details}}
+      <p>We'll email you within 1-2 days with a price, or with any questions. Nothing is charged until you approve the price and pay.</p>
+      <p>Have reference photos? <a href="{{whatsapp_link}}" style="color:#D291BC;">Send them on WhatsApp</a> with your request number.</p>
+      ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  custom_request_approved: {
+    key: "custom_request_approved",
+    name: "Custom request: approved (to customer)",
+    subject: "Your custom request is approved! 🎀 (#{{request_id}})",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">Good news — we can make it! 🎀</h1>
+      <p>Hi {{customer_name}}, your custom request <strong>#{{request_id}}</strong> has been approved.</p>
+      {{admin_message_block}}
+      {{request_details}}
+      <p style="font-size:18px;"><strong>Price: {{quoted_price}}</strong> <span style="color:#9B8589;">(+ shipping, calculated at payment)</span></p>
+      <p style="text-align:center; margin:24px 0;"><a href="{{payment_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Pay &amp; confirm my order</a></p>
+      <p>We start making your piece as soon as payment is confirmed. Questions? Just reply to this email or <a href="{{whatsapp_link}}" style="color:#D291BC;">message us on WhatsApp</a>.</p>
+      ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  custom_request_rejected: {
+    key: "custom_request_rejected",
+    name: "Custom request: not possible (to customer)",
+    subject: "About your custom request (#{{request_id}})",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">Thank you for thinking of us 💕</h1>
+      <p>Hi {{customer_name}}, thank you so much for your custom request <strong>#{{request_id}}</strong>. After looking at it carefully, we're sorry to say we aren't able to take it on this time.</p>
+      {{admin_message_block}}
+      <p>We'd still love to make something for you — have a look at our <a href="{{shop_link}}" style="color:#D291BC;">ready-made designs</a>, or reply to this email if you'd like to adjust your request.</p>
+      ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  admin_custom_request: {
+    key: "admin_custom_request",
+    name: "Admin: new custom request",
+    subject: "🎀 New custom request from {{customer_name}} — {{category_name}}",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">New custom request 🎀</h1>
+      <p><strong>{{customer_name}}</strong> ({{customer_email}}, {{customer_phone}}, {{customer_country}}) requested a custom <strong>{{category_name}}</strong>.</p>
+      {{request_details}}
+      <p><a href="{{admin_request_link}}" style="color:#D291BC;">Review &amp; approve or reject in the admin dashboard &rarr;</a></p>
       ${SIGNOFF}
     ${EMAIL_WRAPPER_CLOSE}`,
   },
@@ -358,3 +458,77 @@ export const SAMPLE_ORDER: OrderRecord = {
   admin_notes: null,
   created_at: new Date().toISOString(),
 };
+
+/**
+ * Vars for the custom-request emails (received / approved / rejected /
+ * admin notification). International customers see the $ quote alongside ₹.
+ */
+export function buildRequestVars(request: CustomRequest): Record<string, string> {
+  const categoryName = CATEGORIES.find((c) => c.slug === request.category)?.name ?? request.category;
+  const isInternational = request.country.trim().toLowerCase() !== "india";
+  const notes = escapeHtml(request.notes).replace(/\n/g, "<br/>");
+
+  const requestDetails = `<div style="margin:16px 0; padding:12px 16px; background:#FBEFF3; border-radius:12px;">
+        <p style="margin:4px 0;"><strong>Category:</strong> ${escapeHtml(categoryName)}</p>
+        <p style="margin:4px 0;"><strong>Quantity:</strong> ${request.quantity}</p>
+        ${request.device_model ? `<p style="margin:4px 0;"><strong>Model / size:</strong> ${escapeHtml(request.device_model)}</p>` : ""}
+        <p style="margin:4px 0;"><strong>Your notes:</strong><br/>${notes}</p>
+      </div>`;
+
+  const quotedPrice =
+    request.quoted_price_inr == null
+      ? ""
+      : isInternational && request.quoted_price_usd != null
+        ? `$${request.quoted_price_usd.toFixed(2)} (or ₹${request.quoted_price_inr.toFixed(2)} if paying in rupees)`
+        : `₹${request.quoted_price_inr.toFixed(2)}`;
+
+  const adminMessageBlock = request.admin_message?.trim()
+    ? `<p style="margin:16px 0; padding:12px 16px; border-left:4px solid #D291BC; background:#FFF8FB;"><em>A note from ${escapeHtml(SITE.name)}:</em><br/>${escapeHtml(request.admin_message.trim()).replace(/\n/g, "<br/>")}</p>`
+    : "";
+
+  return {
+    site_name: SITE.name,
+    site_email: SITE.email,
+    customer_name: escapeHtml(request.customer_name),
+    customer_email: escapeHtml(request.email),
+    customer_phone: escapeHtml(request.phone),
+    customer_country: escapeHtml(request.country),
+    request_id: request.id.slice(0, 8),
+    category_name: escapeHtml(categoryName),
+    request_details: requestDetails,
+    quoted_price: quotedPrice,
+    payment_link: `${SITE.url}/pay/${request.token}`,
+    admin_message_block: adminMessageBlock,
+    admin_request_link: `${SITE.url}/admin/requests/${request.id}`,
+    whatsapp_link: whatsappLink(`Hi! About my custom request #${request.id.slice(0, 8)}`),
+    shop_link: `${SITE.url}/shop`,
+  };
+}
+
+// Fixture request for the admin email editor's preview / test send.
+export const SAMPLE_REQUEST: CustomRequest = {
+  id: "5a3c9e10-0000-4000-8000-000000000000",
+  token: "sample-token-for-preview-only",
+  category: "water-bottles",
+  quantity: 2,
+  device_model: "750 ml steel bottle",
+  notes: "Pastel pink and lilac with Cinnamoroll charms and a little bow on the lid.\nOne with the name 'Aanya', one with 'Riya'.",
+  customer_name: "Aanya Sharma",
+  email: "aanya@example.com",
+  phone: "+91 98765 43210",
+  country: "India",
+  status: "approved",
+  quoted_price_inr: 1499,
+  quoted_price_usd: 18,
+  admin_message: "Love this idea! I'll use matching pastel cream on both so they look like a set.",
+  decided_at: new Date().toISOString(),
+  order_id: null,
+  created_at: new Date().toISOString(),
+};
+
+/** Sample vars for the admin editor's preview / test send, by template type. */
+export function sampleVarsFor(key: string): Record<string, string> {
+  if ((REQUEST_TEMPLATE_KEYS as string[]).includes(key)) return buildRequestVars(SAMPLE_REQUEST);
+  if (key === "newsletter_welcome") return buildNewsletterVars({ code: "CUTEJOY10", percentOff: 10 });
+  return buildOrderVars(SAMPLE_ORDER);
+}

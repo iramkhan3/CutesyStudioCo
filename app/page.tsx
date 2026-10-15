@@ -143,6 +143,22 @@ export default async function HomePage() {
         <div className="mt-10">
           <CustomCaseBuilder customProductTypes={customProductTypes} />
         </div>
+        <Link
+          href="/custom-request"
+          className="card mx-auto mt-10 flex max-w-2xl flex-col items-center gap-4 p-6 text-center transition-transform hover:-translate-y-0.5 sm:flex-row sm:text-left"
+        >
+          <span className="rounded-full bg-lavender-light p-4 text-2xl leading-none">💌</span>
+          <span className="flex-1">
+            <span className="block font-heading text-lg font-semibold text-ink">
+              Want something else made just for you?
+            </span>
+            <span className="block text-sm text-ink/60">
+              Plushies, bag charms, bottles, gift hampers, bulk gifts — request a custom piece in any category. We
+              review it and send you a price before you pay.
+            </span>
+          </span>
+          <span className="btn-secondary shrink-0">Request a custom piece →</span>
+        </Link>
       </section>
 
       {/* Real pieces showcase */}

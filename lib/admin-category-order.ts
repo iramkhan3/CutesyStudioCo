@@ -9,6 +9,8 @@ export type AdminCategoryOrderRow = {
   enabled: boolean;
   // Active products in this category (regardless of the category's own on/off).
   productCount: number;
+  // "Starting from" price (per piece) for custom requests; null = price on request.
+  customFromInr: number | null;
 };
 
 /**
@@ -18,14 +20,14 @@ export type AdminCategoryOrderRow = {
  */
 export async function adminListCategoryOrder(): Promise<AdminCategoryOrderRow[]> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return CATEGORIES.map((c, i) => ({ slug: c.slug, name: c.name, rank: i, enabled: true, productCount: 0 }));
+  if (!supabase) return CATEGORIES.map((c, i) => ({ slug: c.slug, name: c.name, rank: i, enabled: true, productCount: 0, customFromInr: null }));
 
   const [{ data: rows }, { data: products }] = await Promise.all([
     supabase.from("category_order").select("*"),
     supabase.from("products").select("category").eq("active", true),
   ]);
 
-  const rowBySlug = new Map((rows ?? []).map((r: { slug: string; rank: number; enabled?: boolean }) => [r.slug, r]));
+  const rowBySlug = new Map((rows ?? []).map((r: { slug: string; rank: number; enabled?: boolean; custom_from_inr?: number | null }) => [r.slug, r]));
   const counts = new Map<string, number>();
   for (const p of (products ?? []) as { category: string }[]) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
 
@@ -37,6 +39,7 @@ export async function adminListCategoryOrder(): Promise<AdminCategoryOrderRow[]>
       rank: row ? row.rank : 1000 + i,
       enabled: row?.enabled !== false,
       productCount: counts.get(c.slug) ?? 0,
+      customFromInr: row?.custom_from_inr == null ? null : Number(row.custom_from_inr),
     };
   }).sort((a, b) => a.rank - b.rank);
 }
@@ -73,6 +76,25 @@ export async function adminSetCategoryEnabled(slug: string, enabled: boolean): P
   if (error) {
     // Most likely cause: the `enabled` column migration hasn't been run yet.
     const hint = /enabled/i.test(error.message) ? " — run the latest supabase/schema.sql in the Supabase SQL Editor first." : "";
+    return { ok: false, error: error.message + hint };
+  }
+  return { ok: true };
+}
+
+/** Sets a category's "starting from" price for custom requests (null clears it). */
+export async function adminSetCategoryCustomFrom(slug: string, customFromInr: number | null): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { ok: false, error: "Database isn't configured." };
+  if (!CATEGORIES.some((c) => c.slug === slug)) return { ok: false, error: "Unknown category." };
+
+  const { data: existing } = await supabase.from("category_order").select("slug").eq("slug", slug).maybeSingle();
+  const { error } = existing
+    ? await supabase.from("category_order").update({ custom_from_inr: customFromInr }).eq("slug", slug)
+    : await supabase
+        .from("category_order")
+        .insert({ slug, rank: CATEGORIES.findIndex((c) => c.slug === slug) + 1000, custom_from_inr: customFromInr });
+  if (error) {
+    const hint = /custom_from_inr/i.test(error.message) ? " — run the latest supabase/schema.sql in the Supabase SQL Editor first." : "";
     return { ok: false, error: error.message + hint };
   }
   return { ok: true };

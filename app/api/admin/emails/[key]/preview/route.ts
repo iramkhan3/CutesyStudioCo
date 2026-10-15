@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { renderTemplate, buildOrderVars, SAMPLE_ORDER, EMAIL_TEMPLATE_KEYS } from "@/lib/email-templates";
+import { renderTemplate, sampleVarsFor, EMAIL_TEMPLATE_KEYS } from "@/lib/email-templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { key: string } }
     return NextResponse.json({ error: "Missing subject or html." }, { status: 400 });
   }
 
-  const vars = buildOrderVars(SAMPLE_ORDER);
+  const vars = sampleVarsFor(params.key);
   return NextResponse.json({
     subject: renderTemplate(body.subject, vars),
     html: renderTemplate(body.html, vars),

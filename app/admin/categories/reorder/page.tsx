@@ -81,6 +81,26 @@ export default function ReorderCategoriesPage() {
     }
   }
 
+  // Custom-request "starting from" price — saved when the input loses focus.
+  async function handleFromSave(slug: string, raw: string) {
+    const value = raw.trim() === "" ? null : Number(raw);
+    const current = categories.find((c) => c.slug === slug)?.customFromInr ?? null;
+    if (value === current || (value !== null && !Number.isFinite(value))) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/categories/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customFromInr: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save starting price.");
+      setCategories((prev) => prev.map((c) => (c.slug === slug ? { ...c, customFromInr: value } : c)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save starting price.");
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -119,6 +139,14 @@ export default function ReorderCategoriesPage() {
               Reorder products
             </Link>{" "}
             to put your best pieces first.
+          </p>
+          <p className="mt-2 max-w-xl text-sm text-ink-light">
+            <strong>Custom from ₹</strong> is the &quot;starting from&quot; price per piece customers see on the{" "}
+            <Link href="/custom-request" className="underline">
+              custom request form
+            </Link>
+            , and it&apos;s pre-filled when you approve a request (× quantity). Leave blank for &quot;price on
+            request&quot;. Disabled categories can&apos;t be requested.
           </p>
         </div>
         <button
@@ -166,7 +194,29 @@ export default function ReorderCategoriesPage() {
                   {c.enabled && c.productCount === 0 && " · hidden from shop filters until it has one"}
                 </span>
               </span>
-              <label className="ml-auto flex shrink-0 cursor-pointer items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
+              {c.slug !== "ready-to-ship" && (
+                <label
+                  className="ml-auto flex shrink-0 items-center gap-1 text-xs text-ink-light"
+                  title="Custom requests: 'starting from' price per piece, shown on the request form and pre-filled when you approve. Blank = price on request."
+                >
+                  Custom from ₹
+                  <input
+                    key={`${c.slug}-${c.customFromInr}`}
+                    type="number"
+                    min={0}
+                    defaultValue={c.customFromInr ?? ""}
+                    placeholder="—"
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                    onBlur={(e) => handleFromSave(c.slug, e.target.value)}
+                    className="w-20 rounded-lg border border-ink/15 px-2 py-1 text-sm text-ink"
+                  />
+                </label>
+              )}
+              <label
+                className={`${c.slug === "ready-to-ship" ? "ml-auto" : ""} flex shrink-0 cursor-pointer items-center gap-2`}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 <span className={`text-xs font-semibold ${c.enabled ? "text-green-700" : "text-ink-light"}`}>
                   {c.enabled ? "Enabled" : "Disabled"}
                 </span>

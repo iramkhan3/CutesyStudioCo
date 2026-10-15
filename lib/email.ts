@@ -1,9 +1,9 @@
 import "server-only";
 import { Resend } from "resend";
-import type { OrderRecord } from "@/lib/types";
+import type { CustomRequest, OrderRecord } from "@/lib/types";
 import { SITE } from "@/lib/constants";
 import { getEmailTemplate } from "@/lib/email-templates-data";
-import { renderTemplate, buildOrderVars, buildNewsletterVars, type EmailTemplateKey } from "@/lib/email-templates";
+import { renderTemplate, buildOrderVars, buildNewsletterVars, buildRequestVars, type EmailTemplateKey } from "@/lib/email-templates";
 
 function getResendClient(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -76,6 +76,19 @@ export async function sendOrderCancelledEmail(order: OrderRecord) {
 
 export async function sendAdminNewOrderNotification(order: OrderRecord) {
   return sendTemplatedEmail("admin_new_order", SITE.email, buildOrderVars(order));
+}
+
+export async function sendCustomRequestReceivedEmails(request: CustomRequest) {
+  const vars = buildRequestVars(request);
+  return Promise.allSettled([
+    sendTemplatedEmail("custom_request_received", request.email, vars),
+    sendTemplatedEmail("admin_custom_request", SITE.email, vars),
+  ]);
+}
+
+export async function sendCustomRequestDecisionEmail(request: CustomRequest) {
+  const key = request.status === "rejected" ? "custom_request_rejected" : "custom_request_approved";
+  return sendTemplatedEmail(key, request.email, buildRequestVars(request));
 }
 
 export async function sendAbandonedCartEmail(order: OrderRecord) {

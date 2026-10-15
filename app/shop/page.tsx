@@ -57,7 +57,7 @@ export default async function ShopPage({
       </div>
 
       <Link
-        href="/#customize"
+        href={`/custom-request${categorySlug ? `?category=${categorySlug}` : ""}`}
         className="card mx-auto mt-10 flex max-w-xl items-center gap-4 p-5 text-left transition-transform hover:-translate-y-0.5"
       >
         <span className="rounded-full bg-blush-light p-3">
@@ -68,7 +68,9 @@ export default async function ShopPage({
             Don&apos;t see exactly what you want?
           </span>
           <span className="block text-sm text-ink/60">
-            Build a custom phone case, hairbrush, mirror, or keychain, or let me surprise you →
+            {activeCategory
+              ? `Request a custom ${activeCategory.name.toLowerCase()} made just for you →`
+              : "Request a custom piece in any category — we'll send you a price before you pay →"}
           </span>
         </span>
       </Link>

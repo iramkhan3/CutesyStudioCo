@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { markOrderFailed, markOrderPaid, decrementStock } from "@/lib/orders";
+import { markCustomRequestPaidForOrder } from "@/lib/custom-requests";
 import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -77,6 +78,9 @@ export async function POST(req: Request) {
     await Promise.allSettled([
       decrementStock(order).catch((err) =>
         console.error("[verify-payment] stock decrement failed:", err)
+      ),
+      markCustomRequestPaidForOrder(order.id).catch((err) =>
+        console.error("[verify-payment] custom request update failed:", err)
       ),
       sendOrderConfirmationEmail(order).catch((err) =>
         console.error("[verify-payment] confirmation email failed:", err)

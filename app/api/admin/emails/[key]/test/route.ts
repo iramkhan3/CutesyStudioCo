@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendTestEmail } from "@/lib/email";
-import { buildOrderVars, SAMPLE_ORDER, EMAIL_TEMPLATE_KEYS } from "@/lib/email-templates";
+import { sampleVarsFor, EMAIL_TEMPLATE_KEYS } from "@/lib/email-templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: { params: { key: string } }
     return NextResponse.json({ error: "Please provide a valid email address to send the test to." }, { status: 400 });
   }
 
-  const result = await sendTestEmail(body.to.trim(), body.subject, body.html, buildOrderVars(SAMPLE_ORDER));
+  const result = await sendTestEmail(body.to.trim(), body.subject, body.html, sampleVarsFor(params.key));
   if (!result.sent) {
     const message =
       result.reason === "not_configured"
