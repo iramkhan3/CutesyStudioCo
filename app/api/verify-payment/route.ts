@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { markOrderFailed, markOrderPaid, decrementStock } from "@/lib/orders";
+import { getOrderById, markOrderPaid, decrementStock } from "@/lib/orders";
 import { markCustomRequestPaidForOrder } from "@/lib/custom-requests";
 import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from "@/lib/email";
 
@@ -53,8 +53,21 @@ export async function POST(req: Request) {
     expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
 
   if (!isValid) {
-    await markOrderFailed(orderId);
+    // Deliberately does NOT mark the order failed: anyone can call this
+    // endpoint with a made-up signature, and that must never be able to
+    // cancel a real customer's in-progress checkout. A genuinely abandoned
+    // order is cleaned up by the stale-reservation release instead.
     return NextResponse.json({ success: false, error: "Signature verification failed." }, { status: 400 });
+  }
+
+  // The signature only proves Razorpay order <razorpay_order_id> was paid —
+  // it must also be the Razorpay order we created for THIS order. Otherwise a
+  // cheap paid order's signature could be replayed to mark a different,
+  // pricier order as paid.
+  const existing = await getOrderById(orderId);
+  if (!existing || existing.payment_provider !== "razorpay" || existing.razorpay_order_id !== razorpay_order_id) {
+    console.error("[verify-payment] razorpay_order_id doesn't belong to this order", { orderId, razorpay_order_id });
+    return NextResponse.json({ success: false, error: "Payment doesn't match this order." }, { status: 400 });
   }
 
   const result = await markOrderPaid(orderId, razorpay_payment_id);

@@ -15,7 +15,7 @@ import type { CustomRequest, CustomRequestStatus } from "@/lib/types";
 
 export type CustomRequestCategory = { slug: string; name: string; fromInr: number | null };
 
-const NUMERIC = ["quantity", "quoted_price_inr", "quoted_price_usd"] as const;
+const NUMERIC = ["quantity", "quoted_price_inr", "quoted_price_usd", "estimated_days"] as const;
 
 function normalize(row: Record<string, unknown>): CustomRequest {
   const r = { ...row } as Record<string, unknown>;
@@ -134,7 +134,7 @@ export async function suggestUsd(inr: number): Promise<number> {
  */
 export async function adminApproveCustomRequest(
   id: string,
-  quote: { priceInr: number; priceUsd: number; message: string | null }
+  quote: { priceInr: number; priceUsd: number; estimatedDays: number; message: string | null }
 ): Promise<CustomRequest | { error: string }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { error: "Database isn't configured." };
@@ -145,6 +145,7 @@ export async function adminApproveCustomRequest(
       status: "approved",
       quoted_price_inr: quote.priceInr,
       quoted_price_usd: quote.priceUsd,
+      estimated_days: quote.estimatedDays,
       admin_message: quote.message,
       decided_at: new Date().toISOString(),
     })
@@ -153,7 +154,10 @@ export async function adminApproveCustomRequest(
     .select()
     .maybeSingle();
 
-  if (error) return { error: error.message };
+  if (error) {
+    const hint = /estimated_days/i.test(error.message) ? " — run the latest supabase/schema.sql in the Supabase SQL Editor first." : "";
+    return { error: error.message + hint };
+  }
   if (!data) return { error: "This request can't be approved any more (it's already rejected or paid)." };
   return normalize(data);
 }

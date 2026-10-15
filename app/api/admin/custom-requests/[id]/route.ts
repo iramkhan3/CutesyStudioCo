@@ -34,10 +34,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   });
 }
 
-type Body = { action?: unknown; priceInr?: unknown; priceUsd?: unknown; message?: unknown };
+type Body = { action?: unknown; priceInr?: unknown; priceUsd?: unknown; estimatedDays?: unknown; message?: unknown };
 
 /**
- * { action: "approve", priceInr, priceUsd, message? } — quote and email the
+ * { action: "approve", priceInr, priceUsd, estimatedDays, message? } — quote and email the
  * customer a payment link (also used to re-send with a changed quote while
  * unpaid). { action: "reject", message? } — polite rejection email.
  */
@@ -63,9 +63,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!Number.isFinite(priceUsd) || priceUsd < 1) {
       return NextResponse.json({ error: "Enter a $ price of at least $1 (used if the customer pays with PayPal)." }, { status: 400 });
     }
+    const estimatedDays = Number(body.estimatedDays);
+    if (!Number.isInteger(estimatedDays) || estimatedDays < 1 || estimatedDays > 365) {
+      return NextResponse.json({ error: "Enter how many days it'll take to make (1–365)." }, { status: 400 });
+    }
     result = await adminApproveCustomRequest(params.id, {
       priceInr: Math.round(priceInr * 100) / 100,
       priceUsd: Math.round(priceUsd * 100) / 100,
+      estimatedDays,
       message,
     });
   } else if (body.action === "reject") {

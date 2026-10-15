@@ -35,7 +35,8 @@ export type EmailTemplateKey =
   | "custom_request_received"
   | "custom_request_approved"
   | "custom_request_rejected"
-  | "admin_custom_request";
+  | "admin_custom_request"
+  | "admin_new_review";
 
 export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "order_confirmation",
@@ -49,6 +50,7 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "custom_request_approved",
   "custom_request_rejected",
   "admin_custom_request",
+  "admin_new_review",
 ];
 
 /** Templates rendered with buildRequestVars (custom requests), not order vars. */
@@ -57,6 +59,7 @@ export const REQUEST_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "custom_request_approved",
   "custom_request_rejected",
   "admin_custom_request",
+  "admin_new_review",
 ];
 
 export type EmailTemplate = {
@@ -110,6 +113,8 @@ const REQUEST_VARS = [
 
 const REQUEST_DECISION_VARS = [
   { token: "quoted_price", description: "Your quoted total (₹, and $ for international customers)." },
+  { token: "estimated_time", description: "How long it takes to make, e.g. \"about 7 days after payment\"." },
+  { token: "estimated_time_row", description: "Ready-made \"⏳ Ready to ship in about N days\" line (blank if not set)." },
   { token: "payment_link", description: "Private link where the customer pays for the approved request." },
   { token: "admin_message_block", description: "Your note to the customer (blank if you didn't write one)." },
 ] as const;
@@ -119,6 +124,16 @@ const ADMIN_REQUEST_VARS = [
   { token: "customer_phone", description: "Customer's phone." },
   { token: "customer_country", description: "Customer's country." },
   { token: "admin_request_link", description: "Direct link to the request in your admin dashboard." },
+] as const;
+
+const REVIEW_ALERT_VARS = [
+  { token: "site_name", description: "Your shop's name." },
+  { token: "reviewer_name", description: "Name the customer entered." },
+  { token: "review_location", description: "\" from <city>\" (blank if not given)." },
+  { token: "rating_stars", description: "The rating as stars, e.g. ★★★★☆." },
+  { token: "review_body", description: "What they wrote." },
+  { token: "review_order_row", description: "Order number and email line (blank if not given)." },
+  { token: "admin_reviews_link", description: "Link to Admin → Reviews." },
 ] as const;
 
 const ADMIN_VARS = [
@@ -144,6 +159,7 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKey, readonly { token
   custom_request_approved: [...REQUEST_VARS, ...REQUEST_DECISION_VARS],
   custom_request_rejected: [...REQUEST_VARS, ...REQUEST_DECISION_VARS],
   admin_custom_request: [...REQUEST_VARS, ...ADMIN_REQUEST_VARS],
+  admin_new_review: REVIEW_ALERT_VARS,
 };
 
 const EMAIL_WRAPPER_OPEN = `<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">`;
@@ -290,6 +306,7 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
       {{admin_message_block}}
       {{request_details}}
       <p style="font-size:18px;"><strong>Price: {{quoted_price}}</strong> <span style="color:#9B8589;">(+ shipping, calculated at payment)</span></p>
+      {{estimated_time_row}}
       <p style="text-align:center; margin:24px 0;"><a href="{{payment_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Pay &amp; confirm my order</a></p>
       <p>We start making your piece as soon as payment is confirmed. Questions? Just reply to this email or <a href="{{whatsapp_link}}" style="color:#D291BC;">message us on WhatsApp</a>.</p>
       ${SIGNOFF}
@@ -306,6 +323,21 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
       {{admin_message_block}}
       <p>We'd still love to make something for you — have a look at our <a href="{{shop_link}}" style="color:#D291BC;">ready-made designs</a>, or reply to this email if you'd like to adjust your request.</p>
       ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  admin_new_review: {
+    key: "admin_new_review",
+    name: "Admin: new review to approve",
+    subject: "⭐ New {{rating_stars}} review from {{reviewer_name}}",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">New review to approve ⭐</h1>
+      <p><strong>{{reviewer_name}}</strong>{{review_location}} left a review:</p>
+      <p style="font-size:20px; color:#F5B301; margin:8px 0;">{{rating_stars}}</p>
+      <blockquote style="margin:12px 0; padding:12px 16px; background:#FBEFF3; border-radius:12px;">{{review_body}}</blockquote>
+      {{review_order_row}}
+      <p>It's not on your site yet — approve it (or hide it) here:</p>
+      <p><a href="{{admin_reviews_link}}" style="color:#D291BC;">Review it in the admin dashboard &rarr;</a></p>
     ${EMAIL_WRAPPER_CLOSE}`,
   },
   admin_custom_request: {
@@ -348,7 +380,7 @@ export function buildOrderVars(order: OrderRecord, ctx: EmailContext = DEFAULT_E
           : "";
       return `<tr>
           <td style="padding:8px 0;">${escapeHtml(item.name)} × ${item.quantity}${modelNote}</td>
-          <td style="padding:8px 0; text-align:right;">${symbol}${(item.unitPriceInr * item.quantity).toFixed(2)}</td>
+          <td style="padding:8px 0; text-align:right;">${item.kind === "custom" && item.unitPriceInr === 0 ? "" : `${symbol}${(item.unitPriceInr * item.quantity).toFixed(2)}`}</td>
         </tr>`;
     })
     .join("");
@@ -498,6 +530,11 @@ export function buildRequestVars(request: CustomRequest, ctx: EmailContext = DEF
         <p style="margin:4px 0;"><strong>Your notes:</strong><br/>${notes}</p>
       </div>`;
 
+  const estimatedTime =
+    request.estimated_days == null
+      ? ""
+      : `about ${request.estimated_days} day${request.estimated_days === 1 ? "" : "s"} after payment`;
+
   const quotedPrice =
     request.quoted_price_inr == null
       ? ""
@@ -520,6 +557,10 @@ export function buildRequestVars(request: CustomRequest, ctx: EmailContext = DEF
     category_name: escapeHtml(categoryName),
     request_details: requestDetails,
     quoted_price: quotedPrice,
+    estimated_time: estimatedTime,
+    estimated_time_row: estimatedTime
+      ? `<p style="margin:8px 0 16px; color:#5B4B4F;">⏳ <strong>Ready to ship in ${estimatedTime}</strong> — every piece is made by hand, just for you.</p>`
+      : "",
     payment_link: `${SITE.url}/pay/${request.token}`,
     admin_message_block: adminMessageBlock,
     admin_request_link: `${SITE.url}/admin/requests/${request.id}`,
@@ -543,14 +584,43 @@ export const SAMPLE_REQUEST: CustomRequest = {
   status: "approved",
   quoted_price_inr: 1499,
   quoted_price_usd: 18,
+  estimated_days: 7,
   admin_message: "Love this idea! I'll use matching pastel cream on both so they look like a set.",
   decided_at: new Date().toISOString(),
   order_id: null,
   created_at: new Date().toISOString(),
 };
 
+export type ReviewAlertInput = {
+  name: string;
+  location: string | null;
+  rating: number;
+  body: string;
+  email: string | null;
+  order_ref: string | null;
+};
+
+/** Vars for the "new review to approve" alert sent to the maker. */
+export function buildReviewAlertVars(review: ReviewAlertInput): Record<string, string> {
+  const extra = [review.order_ref ? `Order #${escapeHtml(review.order_ref)}` : "", review.email ? escapeHtml(review.email) : ""]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    site_name: SITE.name,
+    reviewer_name: escapeHtml(review.name),
+    review_location: review.location ? ` from ${escapeHtml(review.location)}` : "",
+    rating_stars: "★".repeat(review.rating) + "☆".repeat(5 - review.rating),
+    review_body: escapeHtml(review.body).replace(/\n/g, "<br/>"),
+    review_order_row: extra ? `<p style="color:#9B8589; font-size:13px;">${extra}</p>` : "",
+    admin_reviews_link: `${SITE.url}/admin/reviews`,
+  };
+}
+
 /** Sample vars for the admin editor's preview / test send, by template type. */
 export function sampleVarsFor(key: string): Record<string, string> {
+  if (key === "admin_new_review") {
+    return buildReviewAlertVars({ name: "Aanya", location: "Mumbai", rating: 5, body: "Absolutely loved my case — even cuter in person!", email: "aanya@example.com", order_ref: "0f1bb124" });
+  }
   if ((REQUEST_TEMPLATE_KEYS as string[]).includes(key)) return buildRequestVars(SAMPLE_REQUEST);
   if (key === "newsletter_welcome") return buildNewsletterVars({ code: "CUTEJOY10", percentOff: 10 });
   return buildOrderVars(SAMPLE_ORDER);

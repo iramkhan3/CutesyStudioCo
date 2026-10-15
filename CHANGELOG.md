@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-10-16 — Made to Order, payment hardening, review alerts, earlier cart recovery
+
+### ⚠️ After deploying
+
+Re-run [supabase/schema.sql](supabase/schema.sql) (safe, additive): adds
+`custom_requests.estimated_days`, the `checkout_leads` table, and the
+`admin_new_review` email template.
+
+### Added
+
+- **Made to Order**: categories with no products are never hidden or empty.
+  Shop filters get a "✨ Made to Order (N)" tab listing them; opening any empty
+  category shows the custom request form pre-selected for it; the main shop
+  page ends with a "We also make these, just for you" strip.
+- **Time required on custom quotes**: approving a request now also needs
+  "days to make it"; shown in the approval email (`{{estimated_time_row}}` —
+  added to the live template, which had never been edited), on the payment
+  page, and in the admin.
+- **Email alert for new reviews** (`admin_new_review`, editable in Admin →
+  Emails) sent to the contact email when a customer submits a review.
+- **Earlier abandoned-checkout capture**: once a valid email is typed at
+  checkout, it's saved with the cart (`checkout_leads`, rebuilt server-side
+  from the products table). The daily reminder job now also reaches people
+  who never clicked Pay — still one reminder per person, skipped if they've
+  bought; saved emails are deleted after 30 days. Checkout shows a one-line
+  note about it.
+
+### Fixed (security)
+
+- `/api/verify-payment` checked the Razorpay signature but not that the
+  Razorpay order belonged to the order being marked paid — a cheap paid
+  order's signature could be replayed onto a pricier one. Now required.
+- A request with a made-up signature no longer marks the order failed (it
+  could cancel a real customer's in-progress checkout).
+- `/api/paypal/capture-order` now only captures the PayPal order created for
+  that order (previously any PayPal order id was accepted, and a failed
+  capture would cancel the target order).
+
 ## 2026-10-16 — Admin portal: everything configurable
 
 ### ⚠️ After deploying

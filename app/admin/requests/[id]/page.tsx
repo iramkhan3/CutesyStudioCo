@@ -18,6 +18,7 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
 
   const [priceInr, setPriceInr] = useState("");
   const [priceUsd, setPriceUsd] = useState("");
+  const [estimatedDays, setEstimatedDays] = useState("7");
   const [approveMessage, setApproveMessage] = useState("");
   const [rejectMessage, setRejectMessage] = useState(DEFAULT_REJECT_MESSAGE);
   const [confirmingReject, setConfirmingReject] = useState(false);
@@ -35,6 +36,7 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
         setPriceInr(data.suggested.priceInr != null ? String(data.suggested.priceInr) : "");
         setPriceUsd(data.suggested.priceUsd != null ? String(data.suggested.priceUsd) : "");
         setApproveMessage(data.request.status === "approved" ? data.request.admin_message ?? "" : "");
+        if (data.request.estimated_days != null) setEstimatedDays(String(data.request.estimated_days));
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load request.");
       } finally {
@@ -147,8 +149,9 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
         {request.status === "pending" && <p className="mt-2 text-sm text-amber-800">Waiting for your decision.</p>}
         {request.status === "approved" && (
           <p className="mt-2 text-sm text-blue-800">
-            Approved at ₹{request.quoted_price_inr?.toFixed(2)} / ${request.quoted_price_usd?.toFixed(2)} — waiting for the
-            customer to pay. Payment link:{" "}
+            Approved at ₹{request.quoted_price_inr?.toFixed(2)} / ${request.quoted_price_usd?.toFixed(2)}
+            {request.estimated_days != null && ` · ready ${request.estimated_days} day${request.estimated_days === 1 ? "" : "s"} after payment`} —
+            waiting for the customer to pay. Payment link:{" "}
             <a href={payLink} target="_blank" rel="noopener noreferrer" className="break-all underline">
               {payLink}
             </a>
@@ -206,6 +209,18 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
               </label>
             </div>
             <label className="mt-3 block text-xs font-semibold text-ink-light">
+              Time to make it (days after payment)
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={estimatedDays}
+                onChange={(e) => setEstimatedDays(e.target.value)}
+                className="mt-1 w-full rounded-xl2 border border-ink/15 px-3 py-2 text-sm text-ink outline-none focus:border-pastel"
+              />
+              <span className="mt-1 block font-normal">Shown to the customer as &quot;ready to ship about N days after payment&quot;.</span>
+            </label>
+            <label className="mt-3 block text-xs font-semibold text-ink-light">
               Note to the customer (optional)
               <textarea
                 value={approveMessage}
@@ -218,11 +233,17 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
             <button
               onClick={() =>
                 decide(
-                  { action: "approve", priceInr: Number(priceInr), priceUsd: Number(priceUsd), message: approveMessage },
+                  {
+                    action: "approve",
+                    priceInr: Number(priceInr),
+                    priceUsd: Number(priceUsd),
+                    estimatedDays: Number(estimatedDays),
+                    message: approveMessage,
+                  },
                   request.status === "approved" ? "Quote updated." : "Approved."
                 )
               }
-              disabled={saving || !priceInr || !priceUsd}
+              disabled={saving || !priceInr || !priceUsd || !estimatedDays}
               className="mt-3 w-full rounded-full bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
             >
               {saving ? "Saving…" : request.status === "approved" ? "Update quote & re-send email" : "Approve & email payment link"}

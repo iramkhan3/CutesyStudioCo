@@ -411,6 +411,7 @@ insert into email_templates (key, name, subject, html, active) values
   {{admin_message_block}}
   {{request_details}}
   <p style="font-size:18px;"><strong>Price: {{quoted_price}}</strong> <span style="color:#9B8589;">(+ shipping, calculated at payment)</span></p>
+  {{estimated_time_row}}
   <p style="text-align:center; margin:24px 0;"><a href="{{payment_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Pay &amp; confirm my order</a></p>
   <p>We start making your piece as soon as payment is confirmed. Questions? Just reply to this email or <a href="{{whatsapp_link}}" style="color:#D291BC;">message us on WhatsApp</a>.</p>
   <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
@@ -426,6 +427,22 @@ insert into email_templates (key, name, subject, html, active) values
   <p>Hi {{customer_name}}, thank you so much for your custom request <strong>#{{request_id}}</strong>. After looking at it carefully, we're sorry to say we aren't able to take it on this time.</p>
   {{admin_message_block}}
   <p>We'd still love to make something for you — have a look at our <a href="{{shop_link}}" style="color:#D291BC;">ready-made designs</a>, or reply to this email if you'd like to adjust your request.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
+),
+(
+  'admin_new_review',
+  'Admin: new review to approve',
+  $subj$⭐ New {{rating_stars}} review from {{reviewer_name}}$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">New review to approve ⭐</h1>
+  <p><strong>{{reviewer_name}}</strong>{{review_location}} left a review:</p>
+  <p style="font-size:20px; color:#F5B301; margin:8px 0;">{{rating_stars}}</p>
+  <blockquote style="margin:12px 0; padding:12px 16px; background:#FBEFF3; border-radius:12px;">{{review_body}}</blockquote>
+  {{review_order_row}}
+  <p>It's not on your site yet — approve it (or hide it) here:</p>
+  <p><a href="{{admin_reviews_link}}" style="color:#D291BC;">Review it in the admin dashboard &rarr;</a></p>
   <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
 </div>$html$,
   true
@@ -534,6 +551,11 @@ create table if not exists custom_requests (
   created_at timestamptz not null default now()
 );
 
+-- Time to make it, in days after payment — set by the maker when approving,
+-- shown in the approval email and on the payment page.
+alter table custom_requests add column if not exists estimated_days integer
+  check (estimated_days between 1 and 365);
+
 create index if not exists custom_requests_status_idx on custom_requests (status, created_at desc);
 create index if not exists custom_requests_order_id_idx on custom_requests (order_id);
 
@@ -573,6 +595,28 @@ create table if not exists reviews (
 create index if not exists reviews_status_idx on reviews (status, created_at desc);
 
 alter table reviews enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- checkout_leads — the email a shopper typed at checkout + what was in their
+-- cart, saved in the background before they click Pay, so the daily
+-- abandoned-checkout reminder (lib/abandoned-carts.ts) also reaches people
+-- who never got as far as paying. One row per email (latest cart). Item
+-- names/prices are taken from the products table, never from the browser.
+-- Rows older than 30 days are deleted by the same daily job.
+-- ---------------------------------------------------------------------------
+create table if not exists checkout_leads (
+  email text primary key,
+  name text,
+  country text,
+  items jsonb not null default '[]'::jsonb,
+  reminder_sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists checkout_leads_updated_at_idx on checkout_leads (updated_at);
+
+alter table checkout_leads enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- subscribers (homepage email signup)

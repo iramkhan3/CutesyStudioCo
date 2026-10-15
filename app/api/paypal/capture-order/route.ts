@@ -62,6 +62,13 @@ export async function POST(req: Request) {
   if (order.payment_status !== "pending") {
     return NextResponse.json({ success: false, error: "This order can no longer be paid." }, { status: 400 });
   }
+  // Only capture the PayPal order we created for THIS order — otherwise
+  // someone could capture a different PayPal order against it, or force a
+  // failed capture that cancels another customer's checkout.
+  if (!order.paypal_order_id || order.paypal_order_id !== paypalOrderId) {
+    console.error("[paypal/capture-order] paypalOrderId doesn't belong to this order", { orderId, paypalOrderId });
+    return NextResponse.json({ success: false, error: "Payment doesn't match this order." }, { status: 400 });
+  }
 
   const accessToken = await getPaypalAccessToken(paypalConfig);
   if (!accessToken) {

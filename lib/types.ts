@@ -28,6 +28,8 @@ export type CustomRequest = {
   // Total for all units, excluding shipping. Set on approval.
   quoted_price_inr: number | null;
   quoted_price_usd: number | null;
+  // Days to make it after payment. Set on approval.
+  estimated_days: number | null;
   admin_message: string | null;
   decided_at: string | null;
   order_id: string | null;

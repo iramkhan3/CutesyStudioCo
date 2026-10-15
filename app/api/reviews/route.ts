@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createReview, validateReviewInput } from "@/lib/reviews";
+import { sendNewReviewAlert } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,5 +41,8 @@ export async function POST(req: Request) {
 
   const result = await createReview(input);
   if ("error" in result) return NextResponse.json({ error: "We couldn't save your review — please try again." }, { status: 503 });
+
+  // Best-effort: the review is saved either way and shows on the dashboard.
+  await sendNewReviewAlert(input).catch((err) => console.error("[reviews] admin alert failed:", err));
   return NextResponse.json({ ok: true });
 }

@@ -8,6 +8,8 @@ import {
   buildOrderVars,
   buildNewsletterVars,
   buildRequestVars,
+  buildReviewAlertVars,
+  type ReviewAlertInput,
   type EmailContext,
   type EmailTemplateKey,
 } from "@/lib/email-templates";
@@ -112,6 +114,12 @@ export async function sendCustomRequestReceivedEmails(request: CustomRequest) {
 export async function sendCustomRequestDecisionEmail(request: CustomRequest) {
   const key = request.status === "rejected" ? "custom_request_rejected" : "custom_request_approved";
   return sendTemplatedEmail(key, request.email, buildRequestVars(request, await emailContext()));
+}
+
+/** Tells the maker a customer review is waiting for approval (Admin → Reviews). */
+export async function sendNewReviewAlert(review: ReviewAlertInput) {
+  const ctx = await emailContext();
+  return sendTemplatedEmail("admin_new_review", ctx.adminEmail, buildReviewAlertVars(review));
 }
 
 export async function sendAbandonedCartEmail(order: OrderRecord) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Script from "next/script";
 import Image from "next/image";
 import Link from "next/link";
@@ -129,6 +129,34 @@ export default function CheckoutPage() {
   function markTouched(key: keyof FormState) {
     setTouched((t) => ({ ...t, [key]: true }));
   }
+
+  // Once a valid email is entered, quietly save it with the cart (debounced)
+  // so a shopper who leaves before clicking Pay can still get the one
+  // abandoned-checkout reminder. Fire-and-forget: never blocks or affects
+  // checkout. The server rebuilds the cart from the database.
+  const emailValid = !fieldErrors.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const leadKey = emailValid
+    ? JSON.stringify([form.email.trim().toLowerCase(), form.name.trim(), form.country, items.map((i) => [i.kind, i.kind === "product" ? i.productId : "", i.quantity])])
+    : "";
+  useEffect(() => {
+    if (!leadKey || items.length === 0) return;
+    const timer = setTimeout(() => {
+      fetch("/api/checkout-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          name: form.name.trim(),
+          country: form.country,
+          items: items.map((i) => (i.kind === "product" ? { kind: "product", productId: i.productId, quantity: i.quantity } : { kind: "custom", quantity: i.quantity })),
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
+    // leadKey captures every input that matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadKey]);
 
   const coupons = useCoupons();
   const { settings, countries: COUNTRIES } = useStore();
@@ -416,6 +444,10 @@ export default function CheckoutPage() {
               error={touched.email ? fieldErrors.email : undefined}
             />
           </div>
+          <p className="-mt-2 text-xs text-ink/50">
+            We&apos;ll only use your email for this order — and, if you don&apos;t finish checking out, one friendly
+            reminder.
+          </p>
           <Field
             label="Phone"
             required

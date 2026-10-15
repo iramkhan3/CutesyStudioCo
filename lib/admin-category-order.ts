@@ -118,7 +118,8 @@ function slugify(name: string): string {
 export async function adminCreateCategory(input: CategoryTextInput): Promise<{ ok: boolean; error?: string; slug?: string }> {
   const base = slugify(input.name);
   if (!base) return { ok: false, error: "Name needs at least one letter or number." };
-  const taken = new Set((await getCategories()).map((c) => c.slug));
+  // "made-to-order" is the shop's virtual tab for empty categories (CategoryFilter).
+  const taken = new Set([...(await getCategories()).map((c) => c.slug), "made-to-order"]);
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
 

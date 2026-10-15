@@ -274,6 +274,12 @@ Customers can request a custom piece in **any enabled category** (except
    Admin → Orders with the usual confirmation + new-order emails. Coupons don't
    apply to quotes.
 
+**Made to Order:** any enabled category with no products shows up under a
+"✨ Made to Order" shop filter tab, and opening it shows this request form
+pre-selected — so no category is ever an empty dead end. When approving you
+also enter **days to make it**, shown to the customer in the approval email and
+on the payment page.
+
 All four emails are editable in **Admin → Emails** (preview/test-send use a
 sample request). Code: [lib/custom-requests.ts](lib/custom-requests.ts),
 [components/CustomRequestForm.tsx](components/CustomRequestForm.tsx),
@@ -425,7 +431,12 @@ defaults in [lib/email-templates.ts](lib/email-templates.ts)).
   items are dropped from the email). Each order is marked
   (`abandoned_reminder_sent_at`) before sending, so it can't double-send.
   Requires `CRON_SECRET`. Turn it off any time with the template's Active
-  switch.
+  switch. Also covers shoppers who typed their email at checkout but never
+  clicked Pay: checkout saves the email + cart in the background
+  (`/api/checkout-leads` → `checkout_leads`, cart rebuilt from the products
+  table so it can't be spoofed); saved emails are deleted after 30 days.
+- **New review alert** (`admin_new_review`) — emailed to the contact email
+  whenever a customer submits a review at `/review`.
 
 ## WhatsApp & Instagram
 

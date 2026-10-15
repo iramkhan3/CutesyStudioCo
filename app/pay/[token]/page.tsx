@@ -40,6 +40,12 @@ export default async function PayPage({ params }: { params: { token: string } })
           </p>
         )}
         <p className="mt-2 whitespace-pre-wrap text-sm text-ink/70">{request.notes}</p>
+        {request.status === "approved" && request.estimated_days != null && (
+          <p className="mt-4 rounded-xl2 bg-lavender-light/60 p-3 text-sm text-ink/80">
+            ⏳ <strong>Ready to ship about {request.estimated_days} day{request.estimated_days === 1 ? "" : "s"}</strong> after
+            your payment is confirmed — every piece is made by hand, just for you.
+          </p>
+        )}
         {request.admin_message && request.status !== "pending" && (
           <p className="mt-4 rounded-xl2 border-l-4 border-pastel bg-blush-light/40 p-3 text-sm text-ink/80">
             <em>A note from us:</em> {request.admin_message}
