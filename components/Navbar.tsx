@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { SITE } from "@/lib/constants";
 import { useCartStore, cartItemCount } from "@/lib/store/cart";
 import { useCoupons } from "@/lib/hooks/useCoupons";
+import { useStore } from "@/components/StoreProvider";
 import { CartIcon, CloseIcon, InstagramIcon, MenuIcon } from "@/components/Icons";
 
 // Most of the site lives as sections on the homepage — these are anchor
@@ -30,9 +31,15 @@ export function Navbar() {
   const count = cartItemCount(items);
   const coupons = useCoupons();
   const autoApplyCoupon = coupons.find((c) => c.autoApply);
+  const { settings } = useStore();
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/5 bg-cream/90 backdrop-blur-md">
+      {settings.announcementText.trim() && (
+        <div className="bg-ink px-4 py-2 text-center font-heading text-xs font-semibold text-white sm:text-sm">
+          {settings.announcementText}
+        </div>
+      )}
       {autoApplyCoupon && (
         <div className="bg-gradient-to-r from-pastel-dark to-pastel px-4 py-2 text-center font-heading text-xs font-semibold text-white sm:text-sm">
           🎉 Launch Offer — Flat {autoApplyCoupon.percentOff}% Off Everything in India, No Code Needed!
@@ -66,7 +73,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           <a
-            href={SITE.instagramUrl}
+            href={settings.instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="CutesyStudioCo on Instagram"
@@ -114,7 +121,7 @@ export function Navbar() {
               </Link>
             ))}
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl px-3 py-2 font-heading text-sm font-medium text-ink/80"

@@ -198,7 +198,10 @@ export const CATEGORIES = [
   },
 ] as const;
 
-export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
+// Any category slug — built-in (CATEGORIES above) or created in Admin →
+// Categories, so it's a plain string. CATEGORIES is now only the built-in
+// set + default text; read the live list with getCategories() (lib/settings.ts).
+export type CategorySlug = string;
 
 // Flat domestic (India) shipping rate, waived above the free-shipping
 // threshold. Both are evaluated against the pre-discount cart subtotal.

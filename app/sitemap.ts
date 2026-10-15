@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { SITE, CATEGORIES } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getEnabledCategories } from "@/lib/settings";
 import { getAllProducts } from "@/lib/products";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -17,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/#contact`, changeFrequency: "monthly", priority: 0.5 },
   ];
 
-  const categoryRoutes: MetadataRoute.Sitemap = CATEGORIES.map((c) => ({
+  const categoryRoutes: MetadataRoute.Sitemap = (await getEnabledCategories()).map((c) => ({
     url: `${SITE.url}/shop?category=${c.slug}`,
     changeFrequency: "weekly",
     priority: 0.6,

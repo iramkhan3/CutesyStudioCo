@@ -3,7 +3,28 @@ import { Resend } from "resend";
 import type { CustomRequest, OrderRecord } from "@/lib/types";
 import { SITE } from "@/lib/constants";
 import { getEmailTemplate } from "@/lib/email-templates-data";
-import { renderTemplate, buildOrderVars, buildNewsletterVars, buildRequestVars, type EmailTemplateKey } from "@/lib/email-templates";
+import {
+  renderTemplate,
+  buildOrderVars,
+  buildNewsletterVars,
+  buildRequestVars,
+  type EmailContext,
+  type EmailTemplateKey,
+} from "@/lib/email-templates";
+import { getCategories, getStoreSettings } from "@/lib/settings";
+
+/** Live contact details (Admin → Settings) + category names for email vars. */
+async function emailContext(): Promise<EmailContext & { adminEmail: string }> {
+  const [settings, categories] = await Promise.all([getStoreSettings(), getCategories()]);
+  const names = new Map(categories.map((c) => [c.slug, c.name]));
+  return {
+    contactEmail: settings.contactEmail,
+    whatsappNumber: settings.whatsappNumber,
+    instagramHandle: settings.instagramHandle,
+    categoryName: (slug) => names.get(slug) ?? slug,
+    adminEmail: settings.contactEmail,
+  };
+}
 
 function getResendClient(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -59,44 +80,46 @@ async function sendTemplatedEmail(key: EmailTemplateKey, to: string, vars: Recor
 }
 
 export async function sendOrderConfirmationEmail(order: OrderRecord) {
-  return sendTemplatedEmail("order_confirmation", order.email, buildOrderVars(order));
+  return sendTemplatedEmail("order_confirmation", order.email, buildOrderVars(order, await emailContext()));
 }
 
 export async function sendOrderShippedEmail(order: OrderRecord) {
-  return sendTemplatedEmail("order_shipped", order.email, buildOrderVars(order));
+  return sendTemplatedEmail("order_shipped", order.email, buildOrderVars(order, await emailContext()));
 }
 
 export async function sendOrderDeliveredEmail(order: OrderRecord) {
-  return sendTemplatedEmail("order_delivered", order.email, buildOrderVars(order));
+  return sendTemplatedEmail("order_delivered", order.email, buildOrderVars(order, await emailContext()));
 }
 
 export async function sendOrderCancelledEmail(order: OrderRecord) {
-  return sendTemplatedEmail("order_cancelled", order.email, buildOrderVars(order));
+  return sendTemplatedEmail("order_cancelled", order.email, buildOrderVars(order, await emailContext()));
 }
 
 export async function sendAdminNewOrderNotification(order: OrderRecord) {
-  return sendTemplatedEmail("admin_new_order", SITE.email, buildOrderVars(order));
+  const ctx = await emailContext();
+  return sendTemplatedEmail("admin_new_order", ctx.adminEmail, buildOrderVars(order, ctx));
 }
 
 export async function sendCustomRequestReceivedEmails(request: CustomRequest) {
-  const vars = buildRequestVars(request);
+  const ctx = await emailContext();
+  const vars = buildRequestVars(request, ctx);
   return Promise.allSettled([
     sendTemplatedEmail("custom_request_received", request.email, vars),
-    sendTemplatedEmail("admin_custom_request", SITE.email, vars),
+    sendTemplatedEmail("admin_custom_request", ctx.adminEmail, vars),
   ]);
 }
 
 export async function sendCustomRequestDecisionEmail(request: CustomRequest) {
   const key = request.status === "rejected" ? "custom_request_rejected" : "custom_request_approved";
-  return sendTemplatedEmail(key, request.email, buildRequestVars(request));
+  return sendTemplatedEmail(key, request.email, buildRequestVars(request, await emailContext()));
 }
 
 export async function sendAbandonedCartEmail(order: OrderRecord) {
-  return sendTemplatedEmail("abandoned_cart", order.email, buildOrderVars(order));
+  return sendTemplatedEmail("abandoned_cart", order.email, buildOrderVars(order, await emailContext()));
 }
 
 export async function sendNewsletterWelcomeEmail(email: string, discount: { code: string; percentOff: number } | null) {
-  return sendTemplatedEmail("newsletter_welcome", email, buildNewsletterVars(discount));
+  return sendTemplatedEmail("newsletter_welcome", email, buildNewsletterVars(discount, await emailContext()));
 }
 
 /**

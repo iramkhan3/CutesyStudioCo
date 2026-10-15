@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CustomRequest } from "@/lib/types";
-import { CATEGORIES } from "@/lib/constants";
 import { formatDateTime } from "@/lib/admin-format";
 
 const DEFAULT_REJECT_MESSAGE =
@@ -11,6 +10,7 @@ const DEFAULT_REJECT_MESSAGE =
 
 export default function AdminRequestDetailPage({ params }: { params: { id: string } }) {
   const [request, setRequest] = useState<CustomRequest | null>(null);
+  const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -31,6 +31,7 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
         if (!res.ok) throw new Error(data.error || "Failed to load request.");
         if (cancelled) return;
         setRequest(data.request);
+        setCategoryName(data.categoryName ?? data.request.category);
         setPriceInr(data.suggested.priceInr != null ? String(data.suggested.priceInr) : "");
         setPriceUsd(data.suggested.priceUsd != null ? String(data.suggested.priceUsd) : "");
         setApproveMessage(data.request.status === "approved" ? data.request.admin_message ?? "" : "");
@@ -75,7 +76,6 @@ export default function AdminRequestDetailPage({ params }: { params: { id: strin
   if (loading) return <p className="text-ink-light">Loading…</p>;
   if (!request) return <p className="text-red-700">{error ?? "Request not found."}</p>;
 
-  const categoryName = CATEGORIES.find((c) => c.slug === request.category)?.name ?? request.category;
   const canDecide = request.status === "pending" || request.status === "approved";
   const payLink = typeof window !== "undefined" ? `${window.location.origin}/pay/${request.token}` : `/pay/${request.token}`;
 

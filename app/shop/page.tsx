@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { getAllProducts, getProductsByCategory } from "@/lib/products";
-import { getDisabledCategories } from "@/lib/category-order-data";
-import { CATEGORIES, SITE, type CategorySlug } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getEnabledCategories } from "@/lib/settings";
 import { WandIcon } from "@/components/Icons";
 import { BackButton } from "@/components/BackButton";
 
@@ -30,12 +30,11 @@ export default async function ShopPage({
 }: {
   searchParams: { category?: string };
 }) {
-  const [allProducts, disabled] = await Promise.all([getAllProducts(), getDisabledCategories()]);
-  // A disabled category's URL behaves like an unknown one: show everything.
-  const categorySlug = CATEGORIES.find((c) => c.slug === searchParams.category && !disabled.has(c.slug))
-    ?.slug as CategorySlug | undefined;
+  const [allProducts, categories] = await Promise.all([getAllProducts(), getEnabledCategories()]);
+  // A disabled or unknown category's URL shows everything.
+  const activeCategory = categories.find((c) => c.slug === searchParams.category);
+  const categorySlug = activeCategory?.slug;
   const products = await getProductsByCategory(categorySlug);
-  const activeCategory = CATEGORIES.find((c) => c.slug === categorySlug);
   // "phone-cases" also lists ready-to-ship pieces (see getProductsByCategory).
   const available = new Set(allProducts.map((p) => (p.category === "ready-to-ship" ? "phone-cases" : p.category)));
 
@@ -76,7 +75,7 @@ export default async function ShopPage({
       </Link>
 
       <div className="mt-8 flex justify-center">
-        <CategoryFilter active={categorySlug} available={available} />
+        <CategoryFilter categories={categories} active={categorySlug} available={available} />
       </div>
 
       {products.length > 0 ? (

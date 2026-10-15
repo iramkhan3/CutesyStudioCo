@@ -8,7 +8,6 @@ import {
   CUSTOM_CASE_STYLES,
   CUSTOM_CASE_THEMES,
   CUSTOM_CASE_WEIGHTS,
-  CUSTOM_ORDER_TIMELINE_NOTE,
   PHONE_MODELS,
   type CustomProductType,
   type CustomProductTypeSlug,
@@ -16,6 +15,7 @@ import {
 import { getDisplayPricing } from "@/lib/pricing";
 import type { CustomCaseMode } from "@/lib/types";
 import { CartIcon, GiftIcon, MinusIcon, PlusIcon, WandIcon } from "@/components/Icons";
+import { useStore } from "@/components/StoreProvider";
 
 // Made-to-order, not stock-limited — a generous cap just guards against a
 // pathological input, not a real inventory constraint.
@@ -62,6 +62,7 @@ function ChipGroup({
 
 export function CustomCaseBuilder({ customProductTypes }: { customProductTypes: CustomProductType[] }) {
   const addItem = useCartStore((s) => s.addItem);
+  const { settings } = useStore();
   const router = useRouter();
 
   const [productType, setProductType] = useState<CustomProductTypeSlug>("phone-case");
@@ -158,7 +159,7 @@ export function CustomCaseBuilder({ customProductTypes }: { customProductTypes: 
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
         <span className="text-lg leading-none">🎀</span>
-        <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+        <p>{settings.customOrderTimelineNote}</p>
       </div>
 
       <div className="card p-5">

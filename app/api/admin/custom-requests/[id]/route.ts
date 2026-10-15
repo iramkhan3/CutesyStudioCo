@@ -3,6 +3,7 @@ import {
   adminApproveCustomRequest,
   adminGetCustomRequest,
   adminRejectCustomRequest,
+  categoryName,
   getCustomRequestCategories,
   suggestUsd,
 } from "@/lib/custom-requests";
@@ -25,9 +26,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const suggestedInr = request.quoted_price_inr ?? (category?.fromInr != null ? category.fromInr * request.quantity : null);
   return NextResponse.json({
     request,
+    categoryName: category?.name ?? (await categoryName(request.category)),
     suggested: {
       priceInr: suggestedInr,
-      priceUsd: request.quoted_price_usd ?? (suggestedInr != null ? suggestUsd(suggestedInr) : null),
+      priceUsd: request.quoted_price_usd ?? (suggestedInr != null ? await suggestUsd(suggestedInr) : null),
     },
   });
 }

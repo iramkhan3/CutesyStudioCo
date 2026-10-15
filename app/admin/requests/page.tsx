@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CustomRequest, CustomRequestStatus } from "@/lib/types";
-import { CATEGORIES } from "@/lib/constants";
+import { categoryLabel, useAdminCategories } from "@/components/admin/useAdminCategories";
 import { formatDateTime } from "@/lib/admin-format";
 
 const STATUS_STYLES: Record<CustomRequestStatus, string> = {
@@ -22,9 +22,10 @@ const STATUS_LABELS: Record<CustomRequestStatus, string> = {
 
 const FILTERS: (CustomRequestStatus | "all")[] = ["pending", "approved", "paid", "rejected", "all"];
 
-const categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
 
 export default function AdminRequestsPage() {
+  const categories = useAdminCategories();
+  const categoryName = (slug: string) => categoryLabel(categories, slug);
   const [status, setStatus] = useState<CustomRequestStatus | "all">("pending");
   const [requests, setRequests] = useState<CustomRequest[]>([]);
   const [loading, setLoading] = useState(true);

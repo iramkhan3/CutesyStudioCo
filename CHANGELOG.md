@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-16 — Admin portal: everything configurable
+
+### ⚠️ After deploying
+
+Re-run [supabase/schema.sql](supabase/schema.sql) (safe, additive): adds
+`site_settings`, `reviews`, and `category_order.name/tagline/description`.
+Until then the site keeps working on built-in defaults, but saving Settings,
+Homepage, category text, and reviews fails with a "run schema.sql" message.
+
+### Added
+
+- **Admin → Settings**: contact email/WhatsApp/Instagram, announcement bar,
+  custom-order note, all shipping rates and thresholds, per-country
+  international rates (= checkout country list), $/₹ rate.
+- **Admin → Homepage**: all homepage text, photo carousel manager, About
+  paragraphs, Meet-the-Maker text and photo, launch-banner wording.
+- **Admin → Categories**: create, rename, edit tagline/description, delete
+  unused custom categories (built-ins can be renamed/disabled, not deleted).
+- **Reviews**: public `/review` form (linked from the delivered email, homepage,
+  footer) → Admin → Reviews to approve/hide/edit/delete or add your own with a
+  photo → homepage shows approved reviews with average rating.
+- **Admin → Subscribers**: list, search, remove, CSV export.
+- **Dashboard** "Needs your attention" panel; regrouped admin menu + "View site".
+
+### Changed
+
+- Shipping, currency, contact details, timeline note, category names, and
+  homepage content are read from settings everywhere (storefront, checkout,
+  order APIs, emails) instead of constants. Defaults are unchanged.
+
 ## 2026-10-16 — Custom requests for every category
 
 ### ⚠️ After deploying

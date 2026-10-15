@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getOrderById } from "@/lib/orders";
 import { CheckCircleIcon, SparkleIcon } from "@/components/Icons";
-import { SITE } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Order Confirmed",
@@ -15,6 +15,7 @@ export default async function OrderConfirmationPage({
   searchParams: { orderId?: string };
 }) {
   const order = searchParams.orderId ? await getOrderById(searchParams.orderId) : null;
+  const { contactEmail } = await getStoreSettings();
 
   if (!order) {
     return (
@@ -26,8 +27,8 @@ export default async function OrderConfirmationPage({
         <p className="mt-2 text-ink/60">
           If you just completed a payment and money was deducted, don&apos;t
           worry — email us at{" "}
-          <a href={`mailto:${SITE.email}`} className="underline hover:text-pastel">
-            {SITE.email}
+          <a href={`mailto:${contactEmail}`} className="underline hover:text-pastel">
+            {contactEmail}
           </a>{" "}
           and we&apos;ll sort it out right away.
         </p>

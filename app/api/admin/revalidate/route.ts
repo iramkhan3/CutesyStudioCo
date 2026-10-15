@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminListProducts } from "@/lib/admin-products";
+import { revalidateConfig } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,9 @@ export const fetchCache = "force-no-store";
 export async function POST() {
   const products = await adminListProducts();
 
+  // Also drops cached settings/categories/homepage content/reviews, in case
+  // any of those were edited directly in Supabase too.
+  revalidateConfig();
   revalidatePath("/");
   revalidatePath("/shop");
   for (const product of products) {

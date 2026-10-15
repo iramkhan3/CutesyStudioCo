@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PayForRequest } from "@/components/PayForRequest";
 import { categoryName, getCustomRequestByToken } from "@/lib/custom-requests";
-import { whatsappLink } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/settings";
+import { whatsappLinkFor } from "@/lib/settings-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export default async function PayPage({ params }: { params: { token: string } })
   if (!request) notFound();
 
   const shortId = request.id.slice(0, 8);
-  const name = categoryName(request.category);
+  const name = await categoryName(request.category);
+  const { whatsappNumber } = await getStoreSettings();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
@@ -88,7 +90,7 @@ export default async function PayPage({ params }: { params: { token: string } })
       <p className="mt-6 text-center text-sm text-ink/60">
         Questions about your request?{" "}
         <a
-          href={whatsappLink(`Hi! About my custom request #${shortId}`)}
+          href={whatsappLinkFor(whatsappNumber, `Hi! About my custom request #${shortId}`)}
           target="_blank"
           rel="noopener noreferrer"
           className="font-semibold text-pastel hover:underline"

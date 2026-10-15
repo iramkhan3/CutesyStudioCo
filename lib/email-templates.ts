@@ -4,7 +4,25 @@
 // component) reads directly for its sidebar + "reset to default" button,
 // same pattern as CATEGORIES/CUSTOM_CASE_THEMES in lib/constants.ts.
 import type { CustomRequest, OrderRecord } from "@/lib/types";
-import { CATEGORIES, SITE, whatsappLink } from "@/lib/constants";
+import { CATEGORIES, SITE } from "@/lib/constants";
+import { whatsappLinkFor } from "@/lib/settings-defaults";
+
+/**
+ * Admin-editable store details used inside emails (Admin → Settings), passed
+ * in by lib/email.ts. Defaults to the built-in values for previews/tests.
+ */
+export type EmailContext = {
+  contactEmail: string;
+  whatsappNumber: string;
+  instagramHandle: string;
+  categoryName?: (slug: string) => string;
+};
+
+export const DEFAULT_EMAIL_CONTEXT: EmailContext = {
+  contactEmail: SITE.email,
+  whatsappNumber: SITE.whatsappNumber,
+  instagramHandle: SITE.instagramHandle,
+};
 
 export type EmailTemplateKey =
   | "order_confirmation"
@@ -319,7 +337,7 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function buildOrderVars(order: OrderRecord): Record<string, string> {
+export function buildOrderVars(order: OrderRecord, ctx: EmailContext = DEFAULT_EMAIL_CONTEXT): Record<string, string> {
   const symbol = order.currency === "USD" ? "$" : "₹";
 
   const itemsTable = order.items
@@ -354,7 +372,8 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
     .map((line) => escapeHtml(line as string))
     .join("<br/>");
 
-  const reviewLink = `mailto:${SITE.email}?subject=${encodeURIComponent(`My review — order #${order.id.slice(0, 8)}`)}`;
+  // On-site review form (app/review), pre-filled with the order + name.
+  const reviewLink = `${SITE.url}/review?order=${order.id.slice(0, 8)}&name=${encodeURIComponent(order.customer_name.split(" ")[0] ?? "")}`;
 
   const trackingRow =
     order.tracking_number || order.courier
@@ -363,7 +382,7 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
 
   return {
     site_name: SITE.name,
-    site_email: SITE.email,
+    site_email: ctx.contactEmail,
     customer_name: order.customer_name,
     order_id: order.id.slice(0, 8),
     order_date: new Date(order.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" }),
@@ -378,9 +397,9 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
     tracking_row: trackingRow,
     admin_order_link: `${SITE.url}/admin/orders/${order.id}`,
     review_link: reviewLink,
-    review_button: `<p style="margin:16px 0; padding:16px; background:#FBEFF3; border-radius:12px; text-align:center;">Loved your piece? We'd be so grateful for a review! 💕<br/><a href="${reviewLink}" style="display:inline-block; margin-top:10px; padding:10px 20px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Tell us what you think</a><br/><span style="font-size:13px; color:#9B8589;">Send a few lines (and a photo, if you like) — or tag ${SITE.instagramHandle} on Instagram.</span></p>`,
+    review_button: `<p style="margin:16px 0; padding:16px; background:#FBEFF3; border-radius:12px; text-align:center;">Loved your piece? We'd be so grateful for a review! 💕<br/><a href="${reviewLink}" style="display:inline-block; margin-top:10px; padding:10px 20px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Tell us what you think</a><br/><span style="font-size:13px; color:#9B8589;">It takes a minute — or tag ${ctx.instagramHandle} on Instagram.</span></p>`,
     resume_link: `${SITE.url}/shop`,
-    whatsapp_link: whatsappLink(`Hi! I have a question about my order at ${SITE.name}.`),
+    whatsapp_link: whatsappLinkFor(ctx.whatsappNumber, `Hi! I have a question about my order at ${SITE.name}.`),
   };
 }
 
@@ -391,14 +410,17 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
  * they're not what a "here's a discount code" welcome email should feature.
  * Renders a blank `discount_row` if there's no such coupon right now.
  */
-export function buildNewsletterVars(discount: { code: string; percentOff: number } | null): Record<string, string> {
+export function buildNewsletterVars(
+  discount: { code: string; percentOff: number } | null,
+  ctx: EmailContext = DEFAULT_EMAIL_CONTEXT
+): Record<string, string> {
   const discountRow = discount
     ? `<p style="margin:16px 0; padding:12px; background:#FBEFF3; border-radius:12px; text-align:center;">Here's <strong>${discount.percentOff}% off</strong> your first order — use code <strong>${discount.code}</strong> at checkout.</p>`
     : "";
 
   return {
     site_name: SITE.name,
-    site_email: SITE.email,
+    site_email: ctx.contactEmail,
     shop_link: `${SITE.url}/shop`,
     discount_row: discountRow,
   };
@@ -463,8 +485,9 @@ export const SAMPLE_ORDER: OrderRecord = {
  * Vars for the custom-request emails (received / approved / rejected /
  * admin notification). International customers see the $ quote alongside ₹.
  */
-export function buildRequestVars(request: CustomRequest): Record<string, string> {
-  const categoryName = CATEGORIES.find((c) => c.slug === request.category)?.name ?? request.category;
+export function buildRequestVars(request: CustomRequest, ctx: EmailContext = DEFAULT_EMAIL_CONTEXT): Record<string, string> {
+  const categoryName =
+    ctx.categoryName?.(request.category) ?? CATEGORIES.find((c) => c.slug === request.category)?.name ?? request.category;
   const isInternational = request.country.trim().toLowerCase() !== "india";
   const notes = escapeHtml(request.notes).replace(/\n/g, "<br/>");
 
@@ -488,7 +511,7 @@ export function buildRequestVars(request: CustomRequest): Record<string, string>
 
   return {
     site_name: SITE.name,
-    site_email: SITE.email,
+    site_email: ctx.contactEmail,
     customer_name: escapeHtml(request.customer_name),
     customer_email: escapeHtml(request.email),
     customer_phone: escapeHtml(request.phone),
@@ -500,7 +523,7 @@ export function buildRequestVars(request: CustomRequest): Record<string, string>
     payment_link: `${SITE.url}/pay/${request.token}`,
     admin_message_block: adminMessageBlock,
     admin_request_link: `${SITE.url}/admin/requests/${request.id}`,
-    whatsapp_link: whatsappLink(`Hi! About my custom request #${request.id.slice(0, 8)}`),
+    whatsapp_link: whatsappLinkFor(ctx.whatsappNumber, `Hi! About my custom request #${request.id.slice(0, 8)}`),
     shop_link: `${SITE.url}/shop`,
   };
 }

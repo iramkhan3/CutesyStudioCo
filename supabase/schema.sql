@@ -466,6 +466,12 @@ alter table category_order add column if not exists enabled boolean not null def
 -- and pre-filled as the quote when approving a request. null = "price on
 -- request". Edited in Admin → Categories.
 alter table category_order add column if not exists custom_from_inr numeric(10, 2);
+-- Admin-editable display text (Admin → Categories). null = the built-in text
+-- from CATEGORIES in lib/constants.ts. Rows whose slug isn't built in are
+-- categories created from the admin, and must have a name.
+alter table category_order add column if not exists name text;
+alter table category_order add column if not exists tagline text;
+alter table category_order add column if not exists description text;
 
 alter table category_order enable row level security;
 
@@ -532,6 +538,41 @@ create index if not exists custom_requests_status_idx on custom_requests (status
 create index if not exists custom_requests_order_id_idx on custom_requests (order_id);
 
 alter table custom_requests enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- site_settings — admin-editable store settings and homepage content, one
+-- JSON document per key ('store', 'homepage'). Missing keys/fields fall back
+-- to the defaults in lib/settings-defaults.ts, so nothing is seeded here.
+-- ---------------------------------------------------------------------------
+create table if not exists site_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table site_settings enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- reviews — customer reviews. Submitted via /review (status 'pending') or
+-- added by the maker in Admin → Reviews; only 'approved' ones show on the
+-- homepage.
+-- ---------------------------------------------------------------------------
+create table if not exists reviews (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  location text,
+  rating integer not null check (rating between 1 and 5),
+  body text not null,
+  image_url text,
+  email text,
+  order_ref text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'hidden')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists reviews_status_idx on reviews (status, created_at desc);
+
+alter table reviews enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- subscribers (homepage email signup)

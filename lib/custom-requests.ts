@@ -1,8 +1,7 @@
 import "server-only";
 import { randomBytes } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { CATEGORIES, USD_INR_RATE } from "@/lib/constants";
-import { getDisabledCategories } from "@/lib/category-order-data";
+import { getCategory, getEnabledCategories, getStoreSettings } from "@/lib/settings";
 import type { CustomRequest, CustomRequestStatus } from "@/lib/types";
 
 /**
@@ -24,28 +23,15 @@ function normalize(row: Record<string, unknown>): CustomRequest {
   return r as unknown as CustomRequest;
 }
 
-export function categoryName(slug: string): string {
-  return CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
+export async function categoryName(slug: string): Promise<string> {
+  return (await getCategory(slug))?.name ?? slug;
 }
 
 /** Categories customers can request a custom piece in, with "starting from" prices. */
 export async function getCustomRequestCategories(): Promise<CustomRequestCategory[]> {
-  const supabase = getSupabaseAdmin();
-  const disabled = await getDisabledCategories();
-  const fromBySlug = new Map<string, number | null>();
-
-  if (supabase) {
-    const { data } = await supabase.from("category_order").select("*");
-    for (const row of (data ?? []) as { slug: string; custom_from_inr?: number | null }[]) {
-      fromBySlug.set(row.slug, row.custom_from_inr == null ? null : Number(row.custom_from_inr));
-    }
-  }
-
-  return CATEGORIES.filter((c) => c.slug !== "ready-to-ship" && !disabled.has(c.slug)).map((c) => ({
-    slug: c.slug,
-    name: c.name,
-    fromInr: fromBySlug.get(c.slug) ?? null,
-  }));
+  return (await getEnabledCategories())
+    .filter((c) => c.slug !== "ready-to-ship")
+    .map((c) => ({ slug: c.slug, name: c.name, fromInr: c.customFromInr }));
 }
 
 export type NewCustomRequestInput = {
@@ -136,9 +122,10 @@ export async function adminCountPendingRequests(): Promise<number> {
   return count ?? 0;
 }
 
-/** Suggested USD quote for an INR amount (reference rate, rounded up to $0.50). */
-export function suggestUsd(inr: number): number {
-  return Math.ceil((inr / USD_INR_RATE) * 2) / 2;
+/** Suggested USD quote for an INR amount (admin's $/₹ rate, rounded up to $0.50). */
+export async function suggestUsd(inr: number): Promise<number> {
+  const { shipping } = await getStoreSettings();
+  return Math.ceil((inr / shipping.usdInrRate) * 2) / 2;
 }
 
 /**

@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { COUNTRIES, SITE, USD_INR_RATE, whatsappLink } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { useStore } from "@/components/StoreProvider";
 
 type Category = { slug: string; name: string; fromInr: number | null };
 
@@ -15,6 +16,7 @@ const inputClass =
  * payment link (or politely declines). See lib/custom-requests.ts.
  */
 export function CustomRequestForm({ categories, initialCategory }: { categories: Category[]; initialCategory?: string }) {
+  const { settings, countries: COUNTRIES, whatsappLink } = useStore();
   const [category, setCategory] = useState(
     categories.some((c) => c.slug === initialCategory) ? initialCategory! : categories[0]?.slug ?? ""
   );
@@ -102,7 +104,7 @@ export function CustomRequestForm({ categories, initialCategory }: { categories:
         </label>
         <p className="mt-1.5 text-xs text-ink/60">
           {selected?.fromInr != null
-            ? `Starting from ₹${selected.fromInr.toLocaleString("en-IN")} each (~$${Math.ceil(selected.fromInr / USD_INR_RATE)}) — the final price depends on your design.`
+            ? `Starting from ₹${selected.fromInr.toLocaleString("en-IN")} each (~$${Math.ceil(selected.fromInr / settings.shipping.usdInrRate)}) — the final price depends on your design.`
             : "Price is quoted after we review your request."}
         </p>
       </div>

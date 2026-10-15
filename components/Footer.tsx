@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { SITE } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/settings";
 import { InstagramIcon, MailIcon } from "@/components/Icons";
 
-export function Footer() {
+export async function Footer() {
+  const settings = await getStoreSettings();
   return (
     <footer className="mt-24 border-t border-ink/5 bg-white">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -24,6 +26,7 @@ export function Footer() {
             <li><Link href="/custom-request" className="text-ink/70 hover:text-pastel">Request a Custom Piece</Link></li>
             <li><Link href="/#about" className="text-ink/70 hover:text-pastel">About</Link></li>
             <li><Link href="/#contact" className="text-ink/70 hover:text-pastel">Contact</Link></li>
+            <li><Link href="/review" className="text-ink/70 hover:text-pastel">Write a Review</Link></li>
             <li><Link href="/cart" className="text-ink/70 hover:text-pastel">Cart</Link></li>
           </ul>
         </div>
@@ -33,16 +36,16 @@ export function Footer() {
             Say Hi
           </h3>
           <div className="mt-4 flex flex-col gap-3 text-sm">
-            <a href={`mailto:${SITE.email}`} className="flex items-center gap-2 text-ink/70 hover:text-pastel">
-              <MailIcon className="h-4 w-4" /> {SITE.email}
+            <a href={`mailto:${settings.contactEmail}`} className="flex items-center gap-2 text-ink/70 hover:text-pastel">
+              <MailIcon className="h-4 w-4" /> {settings.contactEmail}
             </a>
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-ink/70 hover:text-pastel"
             >
-              <InstagramIcon className="h-4 w-4" /> {SITE.instagramHandle}
+              <InstagramIcon className="h-4 w-4" /> {settings.instagramHandle}
             </a>
           </div>
         </div>

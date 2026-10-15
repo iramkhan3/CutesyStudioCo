@@ -13,6 +13,11 @@ export default function ReorderCategoriesPage() {
   const [dirty, setDirty] = useState(false);
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
   const dragIndex = useRef<number | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: "", tagline: "", description: "" });
+  const [newCategory, setNewCategory] = useState<{ name: string; tagline: string; description: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +39,34 @@ export default function ReorderCategoriesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
+
+  // Create / edit text / delete — each saves immediately, then reloads the list.
+  async function mutate(url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save.");
+      setReloadKey((k) => k + 1);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(c: AdminCategoryOrderRow) {
+    setEditingSlug(c.slug);
+    setDraft({ name: c.name, tagline: c.tagline, description: c.description });
+  }
 
   function handleDragStart(index: number) {
     dragIndex.current = index;
@@ -149,6 +181,13 @@ export default function ReorderCategoriesPage() {
             request&quot;. Disabled categories can&apos;t be requested.
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setNewCategory(newCategory ? null : { name: "", tagline: "", description: "" })}
+          className="rounded-full border-2 border-pastel-light px-5 py-2 text-sm font-semibold text-ink hover:border-pastel"
+        >
+          + New category
+        </button>
         <button
           onClick={handleSave}
           disabled={saving || !dirty}
@@ -156,7 +195,33 @@ export default function ReorderCategoriesPage() {
         >
           {saving ? "Saving…" : "Save order"}
         </button>
+        </div>
       </div>
+
+      {newCategory && (
+        <div className="mt-5 rounded-xl2 border-2 border-pastel-light bg-white p-5 shadow-soft">
+          <h2 className="font-heading text-lg font-bold text-ink">New category</h2>
+          <CategoryTextFields value={newCategory} onChange={setNewCategory} />
+          <div className="mt-3 flex gap-2">
+            <button
+              disabled={busy || newCategory.name.trim().length < 2}
+              onClick={async () => {
+                if (await mutate("/api/admin/categories", "POST", newCategory)) setNewCategory(null);
+              }}
+              className="rounded-full bg-pastel px-5 py-2 text-sm font-semibold text-white hover:bg-pastel-dark disabled:opacity-50"
+            >
+              {busy ? "Creating…" : "Create category"}
+            </button>
+            <button onClick={() => setNewCategory(null)} className="rounded-full px-4 py-2 text-sm text-ink-light hover:underline">
+              Cancel
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-ink-light">
+            New categories start enabled at the bottom of the list. They show in the shop once a product uses them, and
+            customers can request custom pieces in them right away.
+          </p>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="mt-4 rounded-xl2 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -177,18 +242,21 @@ export default function ReorderCategoriesPage() {
           {categories.map((c, i) => (
             <li
               key={c.slug}
-              draggable
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
-              className={`flex cursor-grab items-center gap-3 rounded-xl2 border border-blush-light bg-white p-3 shadow-soft active:cursor-grabbing ${
+              draggable={editingSlug !== c.slug}
+              className={`flex cursor-grab flex-wrap items-center gap-3 rounded-xl2 border border-blush-light bg-white p-3 shadow-soft active:cursor-grabbing ${
                 c.enabled ? "" : "opacity-60"
               }`}
             >
               <span className="w-8 text-center text-sm font-bold text-ink-light">{i + 1}</span>
               <span className="text-ink-light">⠿</span>
               <span className="min-w-0">
-                <span className="block font-semibold text-ink">{c.name}</span>
+                <span className="block font-semibold text-ink">
+                  {c.name}
+                  {!c.builtIn && <span className="ml-2 rounded-full bg-lavender-light px-2 py-0.5 text-[10px] font-semibold text-ink-light">custom</span>}
+                </span>
                 <span className="block text-xs text-ink-light">
                   {c.productCount} active product{c.productCount === 1 ? "" : "s"}
                   {c.enabled && c.productCount === 0 && " · hidden from shop filters until it has one"}
@@ -231,10 +299,84 @@ export default function ReorderCategoriesPage() {
                 />
                 <span className="relative h-6 w-11 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-pastel peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-pastel peer-disabled:opacity-50" />
               </label>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => (editingSlug === c.slug ? setEditingSlug(null) : startEdit(c))}
+                className="shrink-0 rounded-full border border-ink/15 px-3 py-1 text-xs font-semibold text-ink hover:bg-blush-light"
+              >
+                {editingSlug === c.slug ? "Close" : "Edit"}
+              </button>
+              {editingSlug === c.slug && (
+                <div className="basis-full cursor-default" draggable={false} onDragStart={(e) => e.preventDefault()} onMouseDown={(e) => e.stopPropagation()}>
+                  <CategoryTextFields value={draft} onChange={setDraft} />
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      disabled={busy || draft.name.trim().length < 2}
+                      onClick={async () => {
+                        if (await mutate(`/api/admin/categories/${c.slug}`, "PATCH", draft)) setEditingSlug(null);
+                      }}
+                      className="rounded-full bg-pastel px-5 py-2 text-sm font-semibold text-white hover:bg-pastel-dark disabled:opacity-50"
+                    >
+                      {busy ? "Saving…" : "Save"}
+                    </button>
+                    <button onClick={() => setEditingSlug(null)} className="rounded-full px-4 py-2 text-sm text-ink-light hover:underline">
+                      Cancel
+                    </button>
+                    {!c.builtIn && (
+                      <button
+                        disabled={busy || c.totalProductCount > 0}
+                        title={c.totalProductCount > 0 ? "Move or delete its products first" : undefined}
+                        onClick={async () => {
+                          if (confirm(`Delete the "${c.name}" category? This can't be undone.`)) {
+                            if (await mutate(`/api/admin/categories/${c.slug}`, "DELETE")) setEditingSlug(null);
+                          }
+                        }}
+                        className="ml-auto rounded-full px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-40"
+                      >
+                        Delete category
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-ink-light">
+                    {c.builtIn
+                      ? "Built-in category: you can rename it or switch it off, but not delete it."
+                      : c.totalProductCount > 0
+                        ? `Can't be deleted while ${c.totalProductCount} product(s) use it — move them to another category first.`
+                        : "Not used by any product, so it can be deleted."}
+                  </p>
+                </div>
+              )}
             </li>
           ))}
         </ol>
       )}
+    </div>
+  );
+}
+
+function CategoryTextFields({
+  value,
+  onChange,
+}: {
+  value: { name: string; tagline: string; description: string };
+  onChange: (v: { name: string; tagline: string; description: string }) => void;
+}) {
+  const field = "mt-1 w-full rounded-xl2 border border-ink/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-pastel";
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label className="text-xs font-semibold text-ink-light">
+        Name
+        <input value={value.name} maxLength={60} onChange={(e) => onChange({ ...value, name: e.target.value })} className={field} placeholder="e.g. Phone Grips" />
+      </label>
+      <label className="text-xs font-semibold text-ink-light">
+        Tagline (optional)
+        <input value={value.tagline} maxLength={120} onChange={(e) => onChange({ ...value, tagline: e.target.value })} className={field} placeholder="e.g. Tiny, sweet, and super grippy" />
+      </label>
+      <label className="text-xs font-semibold text-ink-light sm:col-span-2">
+        Description (shown at the top of the shop when this category is selected)
+        <textarea value={value.description} rows={3} maxLength={600} onChange={(e) => onChange({ ...value, description: e.target.value })} className={field} />
+      </label>
     </div>
   );
 }

@@ -440,6 +440,39 @@ defaults in [lib/email-templates.ts](lib/email-templates.ts)).
   on later: sign up at behold.so with the shop's Instagram, create a feed,
   copy its JSON feed URL into `INSTAGRAM_FEED_URL` on Vercel, and redeploy.
 
+## Admin portal — what's configurable
+
+Everything below is edited in `/admin` and goes live immediately (cached
+config is invalidated on save via `revalidateConfig()` in
+[lib/settings.ts](lib/settings.ts); the dashboard's "Refresh storefront cache"
+also clears it).
+
+| Page | What you can change |
+|---|---|
+| **Dashboard** | Order stats + "Needs your attention": orders to ship, custom requests to review, reviews to approve |
+| **Orders** | Fulfillment status, courier, tracking, notes; shipped/delivered emails |
+| **Requests** | Approve (quote ₹/$) or decline custom requests |
+| **Reviews** | Approve/hide/edit/delete customer reviews (submitted at `/review`), or add ones you received elsewhere, with photo + stars. Only approved reviews show on the homepage, with the average rating. |
+| **Products** | Products, prices, photos/videos, stock, active, order |
+| **Categories** | Create / rename / describe / delete (custom ones with no products) / enable-disable / reorder / custom-request "from ₹" price |
+| **Custom Pricing** | Pay-now custom builder prices |
+| **Coupons** | % off, minimum, active, auto-apply, ₹/$ shipping override |
+| **Homepage** | Hero, section headings & text, photo carousel (upload, describe, reorder), launch-banner text, About paragraphs, Meet-the-Maker text + photo |
+| **Emails** | Every customer/admin email template |
+| **Subscribers** | Newsletter list, search, remove, CSV export |
+| **Settings** | Contact email (also where admin notifications go), WhatsApp, Instagram, announcement bar, custom-order note, India flat rate + free threshold, international free threshold ($), per-country international rates (also the checkout country list), default international rate, $/₹ rate |
+
+How it's wired: `site_settings` holds two JSON documents (`store`,
+`homepage`) merged over the defaults in
+[lib/settings-defaults.ts](lib/settings-defaults.ts) (the values the site
+shipped with), so nothing changes until you edit it and a malformed value can
+never break a page. The root layout passes store settings to client components
+through [components/StoreProvider.tsx](components/StoreProvider.tsx)
+(`useStore()`); order routes always re-read them server-side. Categories are
+`CATEGORIES` in [lib/constants.ts](lib/constants.ts) (built-in defaults) +
+`category_order` rows (edits and admin-created categories), read via
+`getCategories()`.
+
 ## Database changes & data safety
 
 The live catalog, coupons, categories, and email templates are edited from

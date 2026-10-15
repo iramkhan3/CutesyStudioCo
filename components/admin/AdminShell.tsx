@@ -27,7 +27,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     return (
       <Link
         href={href}
-        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+        className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${
           active ? "bg-pastel text-white" : "text-ink hover:bg-blush-light"
         }`}
       >
@@ -44,16 +44,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <span className="font-heading text-lg font-bold text-ink">CutesyStudioCo</span>
             <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-bold text-white">Admin</span>
           </div>
-          <nav className="flex items-center gap-2">
-            {navLink("/admin", "Dashboard")}
-            {navLink("/admin/orders", "Orders")}
-            {navLink("/admin/requests", "Requests")}
-            {navLink("/admin/products", "Products")}
-            {navLink("/admin/custom-types", "Custom Pricing")}
-            {navLink("/admin/coupons", "Coupons")}
-            {navLink("/admin/emails", "Emails")}
-            {navLink("/admin/categories/reorder", "Categories")}
-          </nav>
+          <div className="flex items-center gap-3">
+            <a href="/" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-pastel-dark hover:underline">
+              View site ↗
+            </a>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
@@ -61,7 +55,25 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           >
             {loggingOut ? "Signing out…" : "Sign out"}
           </button>
+          </div>
         </div>
+        {/* Grouped: day-to-day → catalog → site content & settings. Wraps on small screens. */}
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 pb-3">
+          {navLink("/admin", "Dashboard")}
+          {navLink("/admin/orders", "Orders")}
+          {navLink("/admin/requests", "Requests")}
+          {navLink("/admin/reviews", "Reviews")}
+          <span className="mx-1 h-5 w-px bg-blush-light" aria-hidden="true" />
+          {navLink("/admin/products", "Products")}
+          {navLink("/admin/categories/reorder", "Categories")}
+          {navLink("/admin/custom-types", "Custom Pricing")}
+          {navLink("/admin/coupons", "Coupons")}
+          <span className="mx-1 h-5 w-px bg-blush-light" aria-hidden="true" />
+          {navLink("/admin/homepage", "Homepage")}
+          {navLink("/admin/emails", "Emails")}
+          {navLink("/admin/subscribers", "Subscribers")}
+          {navLink("/admin/settings", "Settings")}
+        </nav>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
     </div>

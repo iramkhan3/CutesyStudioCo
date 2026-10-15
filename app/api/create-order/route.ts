@@ -5,6 +5,7 @@ import { createPendingOrder, attachRazorpayOrderId, markOrderFailed, reserveOrde
 import { calculateDiscount } from "@/lib/coupons";
 import { getCoupons } from "@/lib/coupons-data";
 import { calculateShipping } from "@/lib/shipping";
+import { getStoreSettings } from "@/lib/settings";
 import { getCustomProductTypes } from "@/lib/custom-types";
 import { PHONE_CASE_CATEGORIES } from "@/lib/constants";
 import type { CustomProductType } from "@/lib/constants";
@@ -180,7 +181,8 @@ export async function POST(req: Request) {
   }
 
   const payableAmount = Math.max(0, subtotal - discount);
-  const shippingAmount = calculateShipping(payableAmount, shippingAddress.country, coupon);
+  const { shipping: shippingConfig } = await getStoreSettings();
+  const shippingAmount = calculateShipping(payableAmount, shippingAddress.country, coupon, shippingConfig);
   const totalAmount = payableAmount + shippingAmount;
 
   const amountInPaise = Math.round(totalAmount * 100);

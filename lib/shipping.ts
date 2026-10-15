@@ -1,11 +1,4 @@
-import {
-  FREE_SHIPPING_THRESHOLD_INR,
-  FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL,
-  INTERNATIONAL_SHIPPING_DEFAULT_INR,
-  INTERNATIONAL_SHIPPING_ZONES,
-  SHIPPING_FLAT_RATE_INR,
-  USD_INR_RATE,
-} from "@/lib/constants";
+import { DEFAULT_SHIPPING, type ShippingConfig } from "@/lib/settings-defaults";
 
 /**
  * The applied coupon's shipping overrides (set from the admin coupons page),
@@ -13,7 +6,7 @@ import {
  * `shippingOverrideUsd` for international orders. null = normal shipping
  * rules; 0 = free shipping; anything else = flat charge. Whichever currency
  * the order is actually charged in, the override for its destination is
- * converted at USD_INR_RATE if needed.
+ * converted at the configured $/₹ rate if needed.
  */
 export type ShippingOverride = { shippingOverrideInr: number | null; shippingOverrideUsd: number | null } | null | undefined;
 
@@ -28,41 +21,54 @@ function roundMoney(n: number): number {
 /**
  * Shipping for an INR-charged (Razorpay) order. Domestic (India): flat rate,
  * waived above the free-shipping threshold. International: zone-based flat
- * rate (see INTERNATIONAL_SHIPPING_ZONES — a stand-in until a real courier
- * API is wired up), waived at or above the international USD threshold's
- * INR equivalent. Evaluated against what the customer is actually paying for
- * the items — i.e. subtotal minus any coupon discount — so a
- * heavily-discounted small order doesn't get free shipping it wouldn't
- * otherwise qualify for. Shared by the cart/checkout preview (client) and
- * the order API (server, authoritative).
+ * rate (a stand-in until a real courier API is wired up), waived at or
+ * above the international USD threshold's INR equivalent. Evaluated against
+ * what the customer is actually paying for the items — i.e. subtotal minus
+ * any coupon discount — so a heavily-discounted small order doesn't get free
+ * shipping it wouldn't otherwise qualify for. Shared by the cart/checkout
+ * preview (client) and the order API (server, authoritative).
+ *
+ * `config` is the admin's shipping settings (Admin → Settings): pass
+ * `settings.shipping` from getStoreSettings() (server) or useStore()
+ * (client). Defaults to the built-in rates.
  *
  * `country` should be omitted when unknown yet (e.g. cart page, before the
  * shipping address is filled in) — defaults to the domestic rate as the
  * most common case.
  */
-export function calculateShipping(payableInr: number, country?: string, override?: ShippingOverride): number {
+export function calculateShipping(
+  payableInr: number,
+  country?: string,
+  override?: ShippingOverride,
+  config: ShippingConfig = DEFAULT_SHIPPING
+): number {
   if (isDomesticCountry(country)) {
     if (typeof override?.shippingOverrideInr === "number") return override.shippingOverrideInr;
-    return payableInr >= FREE_SHIPPING_THRESHOLD_INR ? 0 : SHIPPING_FLAT_RATE_INR;
+    return payableInr >= config.freeThresholdInr ? 0 : config.domesticFlatInr;
   }
 
-  if (typeof override?.shippingOverrideUsd === "number") return roundMoney(override.shippingOverrideUsd * USD_INR_RATE);
-  if (payableInr >= FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL * USD_INR_RATE) return 0;
-  return INTERNATIONAL_SHIPPING_ZONES[country!.trim()] ?? INTERNATIONAL_SHIPPING_DEFAULT_INR;
+  if (typeof override?.shippingOverrideUsd === "number") return roundMoney(override.shippingOverrideUsd * config.usdInrRate);
+  if (payableInr >= config.freeThresholdUsdIntl * config.usdInrRate) return 0;
+  return config.intlZones[country!.trim()] ?? config.intlDefaultInr;
 }
 
 /**
  * Same rules, for a USD-charged (PayPal) order. International: the coupon's
- * USD override as-is, else free at or above FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL,
- * else the zone rate converted to USD. Domestic (an Indian address paying
- * via PayPal): the INR rules, converted to USD.
+ * USD override as-is, else free at or above the international USD
+ * threshold, else the zone rate converted to USD. Domestic (an Indian
+ * address paying via PayPal): the INR rules, converted to USD.
  */
-export function calculateShippingUsd(payableUsd: number, country?: string, override?: ShippingOverride): number {
+export function calculateShippingUsd(
+  payableUsd: number,
+  country?: string,
+  override?: ShippingOverride,
+  config: ShippingConfig = DEFAULT_SHIPPING
+): number {
   if (!isDomesticCountry(country)) {
     if (typeof override?.shippingOverrideUsd === "number") return override.shippingOverrideUsd;
-    if (payableUsd >= FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL) return 0;
+    if (payableUsd >= config.freeThresholdUsdIntl) return 0;
   }
 
-  const shippingInr = calculateShipping(payableUsd * USD_INR_RATE, country, override);
-  return roundMoney(shippingInr / USD_INR_RATE);
+  const shippingInr = calculateShipping(payableUsd * config.usdInrRate, country, override, config);
+  return roundMoney(shippingInr / config.usdInrRate);
 }

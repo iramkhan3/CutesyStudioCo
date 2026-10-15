@@ -1,13 +1,11 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Product } from "@/lib/data/products";
-import { CATEGORIES, type CategorySlug } from "@/lib/constants";
+import type { CategorySlug } from "@/lib/constants";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID_CATEGORIES = new Set<string>(CATEGORIES.map((c) => c.slug));
-
-export function isValidCategory(value: unknown): value is CategorySlug {
-  return typeof value === "string" && VALID_CATEGORIES.has(value);
+function isValidCategory(value: unknown, validCategories: Set<string>): value is CategorySlug {
+  return typeof value === "string" && validCategories.has(value);
 }
 
 function slugify(input: string): string {
@@ -59,7 +57,8 @@ export type ProductInput = {
 
 export type ProductValidationError = { field: string; message: string };
 
-export function validateProductInput(input: Partial<ProductInput>): ProductValidationError[] {
+/** `validCategories`: every category slug (from getCategories()), incl. admin-created ones. */
+export function validateProductInput(input: Partial<ProductInput>, validCategories: Set<string>): ProductValidationError[] {
   const errors: ProductValidationError[] = [];
 
   if (typeof input.name !== "string" || input.name.trim().length < 2 || input.name.trim().length > 120) {
@@ -71,7 +70,7 @@ export function validateProductInput(input: Partial<ProductInput>): ProductValid
   if (typeof input.description !== "string" || input.description.trim().length < 10 || input.description.trim().length > 400) {
     errors.push({ field: "description", message: "Description must be 10-400 characters — short facts, not a paragraph." });
   }
-  if (!isValidCategory(input.category)) {
+  if (!isValidCategory(input.category, validCategories)) {
     errors.push({ field: "category", message: "Choose a valid category." });
   }
   for (const [field, label] of [

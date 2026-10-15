@@ -4,6 +4,7 @@ import { getPaypalAccessToken, getPaypalConfig } from "@/lib/paypal";
 import { attachPaypalOrderId, attachRazorpayOrderId, createPendingOrder, markOrderFailed } from "@/lib/orders";
 import { attachOrderToCustomRequest, categoryName, getCustomRequestByToken } from "@/lib/custom-requests";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
+import { getStoreSettings } from "@/lib/settings";
 import type { OrderItemSnapshot, ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -69,13 +70,13 @@ export async function POST(req: Request, { params }: { params: { token: string }
 
   const subtotal = isUsd ? request.quoted_price_usd! : request.quoted_price_inr;
   const shipping = isUsd
-    ? calculateShippingUsd(subtotal, shippingAddress.country)
-    : calculateShipping(subtotal, shippingAddress.country);
+    ? calculateShippingUsd(subtotal, shippingAddress.country, null, (await getStoreSettings()).shipping)
+    : calculateShipping(subtotal, shippingAddress.country, null, (await getStoreSettings()).shipping);
   const total = round2(subtotal + shipping);
 
   const item: OrderItemSnapshot = {
     kind: "custom",
-    name: `Custom ${categoryName(request.category)}${request.quantity > 1 ? ` × ${request.quantity}` : ""} (request #${request.id.slice(0, 8)})`,
+    name: `Custom ${await categoryName(request.category)}${request.quantity > 1 ? ` × ${request.quantity}` : ""} (request #${request.id.slice(0, 8)})`,
     image: "/products/real/charms-in-hand.jpg",
     unitPriceInr: subtotal,
     quantity: 1,

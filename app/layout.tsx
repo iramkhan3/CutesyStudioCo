@@ -7,6 +7,8 @@ import { NavigationTracker } from "@/components/BackButton";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
+import { StoreProvider } from "@/components/StoreProvider";
+import { getStoreSettings } from "@/lib/settings";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -72,9 +74,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const settings = await getStoreSettings();
   return (
     <html lang="en" className={`${fredoka.variable} ${nunito.variable}`}>
       <body className="flex min-h-screen flex-col">
@@ -85,16 +88,18 @@ export default function RootLayout({
             name: SITE.name,
             description: DESCRIPTION,
             url: SITE.url,
-            email: SITE.email,
-            sameAs: [SITE.instagramUrl],
+            email: settings.contactEmail,
+            sameAs: [settings.instagramUrl],
             areaServed: "IN",
           }}
         />
-        <NavigationTracker />
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppButton />
+        <StoreProvider settings={settings}>
+          <NavigationTracker />
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <WhatsAppButton />
+        </StoreProvider>
       </body>
     </html>
   );

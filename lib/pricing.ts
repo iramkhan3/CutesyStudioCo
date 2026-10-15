@@ -34,10 +34,11 @@ export function getDisplayPricing(mrpInr: number, priceInr: number): DisplayPric
  * USD_INR_RATE. Always call formatUsdApprox() for the "(~$X.XX USD)"
  * bracket form customers actually see.
  */
-export function toUsdApprox(inr: number): string {
-  return (inr / USD_INR_RATE).toFixed(2);
+export function toUsdApprox(inr: number, rate: number = USD_INR_RATE): string {
+  return (inr / rate).toFixed(2);
 }
 
-export function formatUsdApprox(inr: number): string {
-  return `(~$${toUsdApprox(inr)} USD)`;
+/** `rate`: the admin's $/₹ rate (useStore().settings.shipping.usdInrRate). */
+export function formatUsdApprox(inr: number, rate: number = USD_INR_RATE): string {
+  return `(~$${toUsdApprox(inr, rate)} USD)`;
 }

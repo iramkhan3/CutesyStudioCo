@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { useStore } from "@/components/StoreProvider";
 
 /**
  * Floating "chat on WhatsApp" button for the storefront. The pre-filled
@@ -10,6 +11,7 @@ import { SITE, whatsappLink } from "@/lib/constants";
  */
 export function WhatsAppButton() {
   const pathname = usePathname();
+  const { whatsappLink } = useStore();
   if (pathname.startsWith("/admin")) return null;
 
   const onProductPage = pathname.startsWith("/shop/");

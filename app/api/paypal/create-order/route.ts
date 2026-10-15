@@ -6,7 +6,8 @@ import { calculateDiscount } from "@/lib/coupons";
 import { getCoupons } from "@/lib/coupons-data";
 import { calculateShippingUsd } from "@/lib/shipping";
 import { getCustomProductTypes } from "@/lib/custom-types";
-import { PHONE_CASE_CATEGORIES, USD_INR_RATE } from "@/lib/constants";
+import { PHONE_CASE_CATEGORIES } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/settings";
 import type { CustomProductType } from "@/lib/constants";
 import { firstImageUrl } from "@/lib/media";
 import type { CustomCaseSelection, OrderItemSnapshot, ShippingAddress } from "@/lib/types";
@@ -183,21 +184,27 @@ export async function POST(req: Request) {
   // calculateDiscount() is pure percentage math against whatever amount is
   // passed in, so it works fine against a USD subtotal too. A coupon's
   // minimum purchase is in ₹, so it's checked against the USD subtotal's INR
-  // equivalent (USD_INR_RATE) rather than the raw dollar figure.
+  // equivalent (the admin's $/₹ rate) rather than the raw dollar figure.
   //
   // Auto-applied coupons (currently the LAUNCH50 launch offer) are excluded
   // entirely for PayPal/USD orders — that promo is a domestic (INR) launch
   // incentive only, not meant for international buyers. Filtering it out of
   // the list passed to calculateDiscount blocks both the auto-apply and a
   // customer manually typing the same code.
-  const coupons = (await getCoupons()).filter((c) => !c.autoApply);
-  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode, coupons, subtotal * USD_INR_RATE);
+  const [allCoupons, { shipping: shippingConfig }] = await Promise.all([getCoupons(), getStoreSettings()]);
+  const coupons = allCoupons.filter((c) => !c.autoApply);
+  const { discount, coupon, error: couponError } = calculateDiscount(
+    subtotal,
+    couponCode,
+    coupons,
+    subtotal * shippingConfig.usdInrRate
+  );
   if (couponCode && couponCode.trim() && !coupon) {
     return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
   }
 
   const payableAmount = Math.max(0, subtotal - discount);
-  const shippingAmount = calculateShippingUsd(payableAmount, shippingAddress.country, coupon);
+  const shippingAmount = calculateShippingUsd(payableAmount, shippingAddress.country, coupon, shippingConfig);
   const totalAmount = payableAmount + shippingAmount;
 
   if (totalAmount < 1) {

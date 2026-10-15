@@ -1,13 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/data/products";
-import { CATEGORIES } from "@/lib/constants";
+import { getCategory } from "@/lib/settings";
 import { getDisplayPricing } from "@/lib/pricing";
 import { firstImageUrl, displayThumbnailUrl } from "@/lib/media";
 import { QuickAddButton } from "@/components/QuickAddButton";
 
-export function ProductCard({ product }: { product: Product }) {
-  const category = CATEGORIES.find((c) => c.slug === product.category);
+// Async server component: reads the live (admin-editable) category name.
+export async function ProductCard({ product }: { product: Product }) {
+  const category = await getCategory(product.category);
   const { mrpInr, priceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
   const rawCardImage = firstImageUrl(product.images);
   const cardImage = rawCardImage ? displayThumbnailUrl(rawCardImage) : undefined;

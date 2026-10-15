@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug } from "@/lib/products";
-import { CATEGORIES, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getCategory } from "@/lib/settings";
 import { BackButton } from "@/components/BackButton";
 import { getDisplayPricing } from "@/lib/pricing";
 import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
@@ -26,7 +27,7 @@ export async function generateMetadata({
   const product = await getProductBySlug(params.slug);
   if (!product) return {};
 
-  const category = CATEGORIES.find((c) => c.slug === product.category);
+  const category = await getCategory(product.category);
   const title = `${product.name} — Buy Online in India`;
 
   return {
@@ -58,7 +59,7 @@ export default async function ProductPage({
   const product = await getProductBySlug(params.slug);
   if (!product) notFound();
 
-  const category = CATEGORIES.find((c) => c.slug === product.category);
+  const category = await getCategory(product.category);
   const { mrpInr, priceInr, percentOff } = getDisplayPricing(product.mrp_inr, product.price_inr);
   const allProducts = await getAllProducts();
   const related = allProducts

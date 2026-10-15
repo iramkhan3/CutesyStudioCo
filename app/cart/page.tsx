@@ -7,7 +7,7 @@ import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { useCoupons } from "@/lib/hooks/useCoupons";
 import { calculateShipping } from "@/lib/shipping";
-import { CUSTOM_ORDER_TIMELINE_NOTE, FREE_SHIPPING_THRESHOLD_INR, FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL } from "@/lib/constants";
+import { useStore } from "@/components/StoreProvider";
 import { GiftIcon, MinusIcon, PlusIcon, SparkleIcon, TrashIcon, WandIcon } from "@/components/Icons";
 import { BackButton } from "@/components/BackButton";
 
@@ -26,7 +26,8 @@ export default function CartPage() {
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon, error: couponError } = calculateDiscount(subtotalInr, couponCode, coupons);
   const payableInr = Math.max(0, subtotalInr - discount);
-  const shippingInr = calculateShipping(payableInr, undefined, coupon);
+  const { settings } = useStore();
+  const shippingInr = calculateShipping(payableInr, undefined, coupon, settings.shipping);
   const totalInr = payableInr + shippingInr;
   const hasCustomItem = items.some((i) => i.kind === "custom");
 
@@ -61,7 +62,7 @@ export default function CartPage() {
       {hasCustomItem && (
         <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
           <span className="text-lg leading-none">🎀</span>
-          <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+          <p>{settings.customOrderTimelineNote}</p>
         </div>
       )}
 
@@ -228,8 +229,8 @@ export default function CartPage() {
           {typeof coupon?.shippingOverrideInr === "number"
             ? `${coupon.code} sets shipping within India to ${shippingInr === 0 ? "free" : `₹${shippingInr.toFixed(2)}`} on this order.`
             : shippingInr === 0
-            ? `Free shipping within India. International orders ship free over $${FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL}; otherwise rates are calculated at checkout.`
-            : `Add ₹${(FREE_SHIPPING_THRESHOLD_INR - payableInr).toFixed(2)} more for free shipping within India. International orders ship free over $${FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL}.`}
+            ? `Free shipping within India. International orders ship free over $${settings.shipping.freeThresholdUsdIntl}; otherwise rates are calculated at checkout.`
+            : `Add ₹${(settings.shipping.freeThresholdInr - payableInr).toFixed(2)} more for free shipping within India. International orders ship free over $${settings.shipping.freeThresholdUsdIntl}.`}
         </p>
         <Link href="/checkout" className="btn-primary mt-4">
           Proceed to Checkout

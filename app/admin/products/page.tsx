@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/lib/data/products";
-import { CATEGORIES } from "@/lib/constants";
+import { categoryLabel, useAdminCategories } from "@/components/admin/useAdminCategories";
 import { formatMoney } from "@/lib/admin-format";
 import { firstImageUrl, displayThumbnailUrl } from "@/lib/media";
 
 export default function AdminProductsPage() {
+  const CATEGORIES = useAdminCategories();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -270,7 +271,7 @@ export default function AdminProductsPage() {
                         <span className="font-semibold text-ink hover:text-pastel-dark">{p.name}</span>
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-ink-light">{p.category}</td>
+                    <td className="px-4 py-3 text-ink-light">{categoryLabel(CATEGORIES, p.category)}</td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-ink">{formatMoney(p.price_inr, "INR")}</div>
                       {p.mrp_inr > p.price_inr && (

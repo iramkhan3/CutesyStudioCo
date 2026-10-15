@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES } from "@/lib/constants";
+import { useAdminCategories } from "@/components/admin/useAdminCategories";
 import type { Product } from "@/lib/data/products";
 import type { ProductInput } from "@/lib/admin-products";
 import ImageUploader from "@/components/admin/ImageUploader";
@@ -19,7 +19,8 @@ export default function ProductForm({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0].slug);
+  const CATEGORIES = useAdminCategories();
+  const [category, setCategory] = useState<string>(initial?.category ?? CATEGORIES[0].slug);
   const [description, setDescription] = useState(initial?.description ?? "");
   const [mrpInr, setMrpInr] = useState(initial ? String(initial.mrp_inr) : "");
   const [priceInr, setPriceInr] = useState(initial ? String(initial.price_inr) : "");

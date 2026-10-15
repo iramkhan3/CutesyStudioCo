@@ -1,3 +1,4 @@
+import { getCategories } from "@/lib/settings";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
@@ -27,7 +28,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const errors = validateProductInput(body);
+  const categorySlugs = new Set((await getCategories()).map((c) => c.slug));
+  const errors = validateProductInput(body, categorySlugs);
   if (errors.length > 0) {
     return NextResponse.json({ error: "Please fix the highlighted fields.", fieldErrors: errors }, { status: 400 });
   }

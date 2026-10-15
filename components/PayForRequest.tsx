@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
-import { COUNTRIES, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { useStore } from "@/components/StoreProvider";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
 
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
@@ -37,6 +38,7 @@ const inputClass =
  */
 export function PayForRequest({ token, customerName, email, phone, defaultCountry, priceInr, priceUsd }: Props) {
   const router = useRouter();
+  const { settings, countries: COUNTRIES } = useStore();
   const [address, setAddress] = useState({
     line1: "",
     line2: "",
@@ -53,7 +55,9 @@ export function PayForRequest({ token, customerName, email, phone, defaultCountr
   const pendingOrderIdRef = useRef<string | null>(null);
 
   const usd = method === "paypal" && priceUsd != null;
-  const shipping = usd ? calculateShippingUsd(priceUsd!, address.country) : calculateShipping(priceInr, address.country);
+  const shipping = usd
+    ? calculateShippingUsd(priceUsd!, address.country, null, settings.shipping)
+    : calculateShipping(priceInr, address.country, null, settings.shipping);
   const subtotal = usd ? priceUsd! : priceInr;
   const total = Math.round((subtotal + shipping) * 100) / 100;
   const fmt = (n: number) => (usd ? `$${n.toFixed(2)}` : `₹${n.toFixed(2)}`);

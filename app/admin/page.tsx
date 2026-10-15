@@ -27,6 +27,8 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const [attention, setAttention] = useState<{ pendingRequests: number; pendingReviews: number; subscribers: number } | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -43,6 +45,7 @@ export default function AdminDashboardPage() {
         const ordersData = await ordersRes.json();
         if (cancelled) return;
         setStats(statsData.stats);
+        setAttention(statsData.attention ?? null);
         setRecentOrders((ordersData.orders as OrderRecord[]).slice(0, 8));
       } catch {
         if (!cancelled) setError("Couldn't load the dashboard. Try refreshing.");
@@ -84,6 +87,29 @@ export default function AdminDashboardPage() {
         <p role="alert" className="mt-6 rounded-xl2 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
+      )}
+
+      {attention && (attention.pendingRequests > 0 || attention.pendingReviews > 0 || (stats?.unfulfilledCount ?? 0) > 0) && (
+        <div className="mt-6 rounded-xl2 border-2 border-amber-200 bg-amber-50 p-4">
+          <p className="font-heading text-sm font-bold text-amber-900">Needs your attention</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(stats?.unfulfilledCount ?? 0) > 0 && (
+              <Link href="/admin/orders" className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow-soft hover:bg-blush-light">
+                📦 {stats!.unfulfilledCount} paid order{stats!.unfulfilledCount === 1 ? "" : "s"} to ship →
+              </Link>
+            )}
+            {attention.pendingRequests > 0 && (
+              <Link href="/admin/requests" className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow-soft hover:bg-blush-light">
+                💌 {attention.pendingRequests} custom request{attention.pendingRequests === 1 ? "" : "s"} to review →
+              </Link>
+            )}
+            {attention.pendingReviews > 0 && (
+              <Link href="/admin/reviews" className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow-soft hover:bg-blush-light">
+                ⭐ {attention.pendingReviews} review{attention.pendingReviews === 1 ? "" : "s"} to approve →
+              </Link>
+            )}
+          </div>
+        </div>
       )}
 
       {loading ? (

@@ -10,7 +10,8 @@ import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { useCoupons } from "@/lib/hooks/useCoupons";
 import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
-import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE, USD_INR_RATE } from "@/lib/constants";
+import { PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE } from "@/lib/constants";
+import { useStore } from "@/components/StoreProvider";
 import { formatUsdApprox } from "@/lib/pricing";
 import { ChevronLeftIcon, GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
@@ -130,6 +131,8 @@ export default function CheckoutPage() {
   }
 
   const coupons = useCoupons();
+  const { settings, countries: COUNTRIES } = useStore();
+  const usdRate = settings.shipping.usdInrRate;
   // The LAUNCH50 launch offer (auto-applied, no code needed) is a domestic
   // INR incentive only — app/api/paypal/create-order excludes it server-side
   // for PayPal orders, so it's excluded here too, otherwise this preview
@@ -143,8 +146,8 @@ export default function CheckoutPage() {
   // since this preview is INR with a "(~$X USD)" approximation alongside.
   const shippingInr =
     paymentMethod === "paypal"
-      ? Math.round(calculateShippingUsd(payableInr / USD_INR_RATE, form.country, coupon) * USD_INR_RATE * 100) / 100
-      : calculateShipping(payableInr, form.country, coupon);
+      ? Math.round(calculateShippingUsd(payableInr / usdRate, form.country, coupon, settings.shipping) * usdRate * 100) / 100
+      : calculateShipping(payableInr, form.country, coupon, settings.shipping);
   const totalInr = payableInr + shippingInr;
   const hasCustomItem = items.some((i) => i.kind === "custom");
   const isInternational = !!form.country && form.country !== "India";
@@ -386,7 +389,7 @@ export default function CheckoutPage() {
       {hasCustomItem && (
         <div className="mt-6 flex items-start gap-3 rounded-xl2 border-2 border-pastel-dark/20 bg-pastel-dark/10 p-4 text-sm text-ink/80">
           <span className="text-lg leading-none">🎀</span>
-          <p>{CUSTOM_ORDER_TIMELINE_NOTE}</p>
+          <p>{settings.customOrderTimelineNote}</p>
         </div>
       )}
 
@@ -541,7 +544,7 @@ export default function CheckoutPage() {
           ) : PAYPAL_CLIENT_ID ? (
             <div>
               <p className="mb-2 text-center text-xs text-ink/50">
-                You&apos;ll pay approximately {formatUsdApprox(totalInr)} via PayPal
+                You&apos;ll pay approximately {formatUsdApprox(totalInr, usdRate)} via PayPal
               </p>
               <PayPalScriptProvider
                 options={{ clientId: PAYPAL_CLIENT_ID, currency: "USD", intent: "capture" }}
@@ -603,7 +606,7 @@ export default function CheckoutPage() {
                   </div>
                   {isInternational && (
                     <div className="text-xs font-normal text-ink/40">
-                      {formatUsdApprox(item.priceInr * item.quantity)}
+                      {formatUsdApprox(item.priceInr * item.quantity, usdRate)}
                     </div>
                   )}
                 </div>
@@ -626,7 +629,7 @@ export default function CheckoutPage() {
               <span>
                 ₹{subtotalInr.toFixed(2)}
                 {isInternational && (
-                  <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(subtotalInr)}</span>
+                  <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(subtotalInr, usdRate)}</span>
                 )}
               </span>
             </div>
@@ -636,7 +639,7 @@ export default function CheckoutPage() {
                 <span>
                   -₹{discount.toFixed(2)}
                   {isInternational && (
-                    <span className="ml-1 text-xs text-pastel-dark/60">{formatUsdApprox(discount)}</span>
+                    <span className="ml-1 text-xs text-pastel-dark/60">{formatUsdApprox(discount, usdRate)}</span>
                   )}
                 </span>
               </div>
@@ -650,7 +653,7 @@ export default function CheckoutPage() {
                   <>
                     ₹{shippingInr.toFixed(2)}
                     {isInternational && (
-                      <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(shippingInr)}</span>
+                      <span className="ml-1 text-xs text-ink/40">{formatUsdApprox(shippingInr, usdRate)}</span>
                     )}
                   </>
                 )}
@@ -662,7 +665,7 @@ export default function CheckoutPage() {
             <span>
               ₹{totalInr.toFixed(2)}
               {isInternational && (
-                <span className="ml-1.5 text-sm font-normal text-ink/50">{formatUsdApprox(totalInr)}</span>
+                <span className="ml-1.5 text-sm font-normal text-ink/50">{formatUsdApprox(totalInr, usdRate)}</span>
               )}
             </span>
           </div>

@@ -6,27 +6,15 @@ import { CustomCaseBuilder } from "@/components/CustomCaseBuilder";
 import { DecorativeScatter } from "@/components/Decorative";
 import { WaveDivider } from "@/components/WaveDivider";
 import { HomeCarousel } from "@/components/HomeCarousel";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getHomepageContent, getStoreSettings } from "@/lib/settings";
+import { whatsappLinkFor } from "@/lib/settings-defaults";
+import { getApprovedReviews } from "@/lib/reviews";
 import { getAllProducts } from "@/lib/products";
 import { getCustomProductTypes } from "@/lib/custom-types";
 import { getCoupons } from "@/lib/coupons-data";
 import { getInstagramPosts } from "@/lib/instagram";
 import { ChevronRightIcon, InstagramIcon, MailIcon, SparkleIcon, StarIcon, WandIcon } from "@/components/Icons";
-
-const CAROUSEL_SLIDES = [
-  { src: "/products/real/rainbow-hello-kitty-case.jpg", alt: "Pastel rainbow Hello Kitty decoden phone case" },
-  { src: "/products/real/cookies-cream-case.jpg", alt: "Cookies and cream themed decoden phone case" },
-  { src: "/products/real/carousel-dreams-case.jpg", alt: "Pastel carousel-themed decoden phone case" },
-  { src: "/products/real/lilac-garden-case-1.jpg", alt: "Lilac garden decoden phone case" },
-  { src: "/products/real/vanilla-carousel-case-1.jpg", alt: "Vanilla carousel decoden phone case" },
-  { src: "/products/real/cinnamoroll-sky-case.jpg", alt: "Cinnamoroll sky blue decoden phone case" },
-  { src: "/products/real/rainbow-noir-case.jpg", alt: "Rainbow noir decoden phone case" },
-  { src: "/products/real/christmas-sparkle-case.jpg", alt: "Christmas sparkle decoden phone case" },
-  { src: "/marketing/pastel-cases-pair.jpg", alt: "A pair of pastel decoden phone cases side by side" },
-  { src: "/marketing/three-cases-lineup.jpg", alt: "Three finished decoden phone cases lined up" },
-  { src: "/products/real/charms-in-hand.jpg", alt: "A handful of tiny charms ready to be placed" },
-  { src: "/marketing/festive-pouches-duo.jpg", alt: "A Christmas pouch and a Hello Kitty pouch, handmade" },
-];
 
 const INSTAGRAM_TEASER_IMAGE = "/marketing/one-of-a-kind-real-hands.jpg";
 
@@ -35,16 +23,24 @@ const INSTAGRAM_TEASER_IMAGE = "/marketing/one-of-a-kind-real-hands.jpg";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [products, customProductTypes, coupons, instagramPosts] = await Promise.all([
+  const [products, customProductTypes, coupons, instagramPosts, content, settings, reviews] = await Promise.all([
     getAllProducts(),
     getCustomProductTypes(),
     getCoupons(),
     getInstagramPosts(),
+    getHomepageContent(),
+    getStoreSettings(),
+    getApprovedReviews(),
   ]);
+  // Homepage text, photos, and contact details are editable in Admin →
+  // Homepage / Settings (lib/settings.ts); these are the live values.
+  const whatsappLink = (message: string) => whatsappLinkFor(settings.whatsappNumber, message);
+  const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   // Manual admin display order (see /admin/products/reorder) — the top 9 is
   // the homepage's main highlight, per site design.
   const highlight = products.slice(0, 9);
   const autoApplyCoupon = coupons.find((c) => c.autoApply);
+  const withPercent = (text: string) => text.split("{percent}").join(String(autoApplyCoupon?.percentOff ?? ""));
 
   return (
     <>
@@ -52,17 +48,11 @@ export default async function HomePage() {
       <section id="home" className="relative overflow-hidden bg-pastel-hero px-4 py-20 sm:py-28">
         <DecorativeScatter />
         <div className="relative mx-auto max-w-3xl text-center">
-          <span className="pill-tag mx-auto">Made just for you</span>
-          <h1 className="mt-5 font-heading text-4xl font-bold leading-tight text-ink sm:text-6xl">
-            Design your dream piece,
-            <br /> made by hand
+          <span className="pill-tag mx-auto">{content.heroTag}</span>
+          <h1 className="mt-5 whitespace-pre-line font-heading text-4xl font-bold leading-tight text-ink sm:text-6xl">
+            {content.heroTitle}
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-ink/70 sm:text-lg">
-            {SITE.name} is a one-woman decoden studio. Pick your phone case,
-            hairbrush, mirror, or keychain, tell us your vibe, and we&apos;ll
-            hand-cover it in cute charms and swirls of satisfying decoden
-            cream — one of one, just for you.
-          </p>
+          <p className="mx-auto mt-5 max-w-xl whitespace-pre-line text-base text-ink/70 sm:text-lg">{content.heroText}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a href="#customize" className="btn-primary">
               <WandIcon className="h-4 w-4" /> Design Your Own
@@ -78,13 +68,9 @@ export default async function HomePage() {
       {/* Shop highlight — the site's main showcase, in admin-controlled order */}
       <section id="shop" className="mx-auto max-w-7xl scroll-mt-16 px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
-          <span className="pill-tag mx-auto">Existing Designs</span>
-          <h2 className="section-heading mt-4">Our Favorite Pieces Right Now</h2>
-          <p className="mt-3 max-w-xl text-ink/70">
-            Already finished and sitting in the studio — buy this exact piece
-            and it ships in 1-2 days. Love the design but need a different
-            phone? Every design here can be custom-made for your exact model.
-          </p>
+          <span className="pill-tag mx-auto">{content.shopTag}</span>
+          <h2 className="section-heading mt-4">{content.shopTitle}</h2>
+          <p className="mt-3 max-w-xl whitespace-pre-line text-ink/70">{content.shopText}</p>
           {products.length > highlight.length && (
             <Link href="/shop" className="btn-primary mt-6">
               <SparkleIcon className="h-4 w-4" /> View All {products.length} Existing Designs →
@@ -133,12 +119,8 @@ export default async function HomePage() {
       <section id="customize" className="mx-auto max-w-7xl scroll-mt-16 px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
           <span className="pill-tag mx-auto">Start Here</span>
-          <h2 className="section-heading mt-4">Build Your Dream Piece</h2>
-          <p className="mt-3 max-w-xl text-ink/70">
-            Phone case, hairbrush, hand mirror, table mirror, or keychain —
-            pick a type, choose every detail yourself, or let us surprise you
-            with something one-of-a-kind.
-          </p>
+          <h2 className="section-heading mt-4">{content.customizeTitle}</h2>
+          <p className="mt-3 max-w-xl whitespace-pre-line text-ink/70">{content.customizeText}</p>
         </div>
         <div className="mt-10">
           <CustomCaseBuilder customProductTypes={customProductTypes} />
@@ -165,15 +147,11 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center">
           <span className="pill-tag mx-auto">Real Pieces, Real Magic</span>
-          <h2 className="section-heading mt-4">No renders. No stock photos. Just the real thing.</h2>
-          <p className="mt-3 max-w-xl text-ink/70">
-            A look at what leaves our desk — hand-placed charms, piped
-            cream, and every little detail intact. This is the kind of care
-            that goes into every custom order too.
-          </p>
+          <h2 className="section-heading mt-4">{content.carouselTitle}</h2>
+          <p className="mt-3 max-w-xl whitespace-pre-line text-ink/70">{content.carouselText}</p>
         </div>
         <div className="mx-auto mt-10 max-w-xl">
-          <HomeCarousel slides={CAROUSEL_SLIDES} />
+          {content.carousel.length > 0 && <HomeCarousel slides={content.carousel} />}
         </div>
       </section>
 
@@ -193,12 +171,9 @@ export default async function HomePage() {
             <div className="text-center md:text-left">
               <span className="pill-tag">Launch Offer</span>
               <h2 className="mt-4 font-heading text-3xl font-semibold text-ink sm:text-4xl">
-                Flat {autoApplyCoupon.percentOff}% off, everything
+                {withPercent(content.launchTitle)}
               </h2>
-              <p className="mt-4 text-ink/70">
-                To celebrate going live, every single piece — ready-to-ship or
-                made to order — is {autoApplyCoupon.percentOff}% off, automatically, no code needed.
-              </p>
+              <p className="mt-4 whitespace-pre-line text-ink/70">{withPercent(content.launchText)}</p>
               <p className="mt-2 text-sm text-ink/60">
                 🇮🇳 For orders paid in ₹ (within India). International orders paying via
                 PayPal aren&apos;t included in this offer.
@@ -215,43 +190,21 @@ export default async function HomePage() {
       <section id="about" className="relative scroll-mt-16 overflow-hidden px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <span className="pill-tag mx-auto">Our Story</span>
-          <h2 className="section-heading mt-4">A little studio, a whole lot of cute</h2>
+          <h2 className="section-heading mt-4">{content.aboutTitle}</h2>
         </div>
         <div className="mx-auto mt-10 max-w-3xl space-y-6 text-ink/80">
-          <p>
-            CutesyStudioCo started the way a lot of good things do — with a
-            dream and a life that felt a little too plain. What began as
-            decorating my own case with a couple of cute charms and creamy
-            decoden turned into a passion to transform the world with a dash
-            of joy. Every object that you see daily can make you happy —
-            everything from phone cases and covers, jewelry boxes, mirrors,
-            hairbrushes, tablet stands to trinket boxes.
-          </p>
-          <p>
-            If you&apos;re new to the term: <strong className="text-ink">decoden</strong> is
-            a Japanese decorating style built around rhinestones, cute
-            charms, and swirls of faux cream, layered on until an everyday
-            object looks like it belongs in a dessert shop. It&apos;s fussy, it&apos;s
-            slow, and it is genuinely my favorite way to spend my leisure time.
-          </p>
-          <p>
-            It is made from 100% silicone and is completely safe and
-            enhances strength of the objects. All charms are firmly attached
-            to the silicone and don&apos;t fall off!
-          </p>
-          <p>
-            Every single piece that leaves this studio is made by hand, one
-            at a time — no molds, no mass production, no two pieces exactly
-            alike. I place each charm myself, seal it by hand, and pack it
-            up with as much care as I put into making it.
-          </p>
+          {content.aboutParagraphs.map((paragraph, i) => (
+            <p key={i} className="whitespace-pre-line">
+              {paragraph}
+            </p>
+          ))}
         </div>
 
         <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 items-center gap-10 rounded-xl3 bg-lavender-light p-6 sm:p-10 md:grid-cols-[280px_1fr]">
           <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-xl3 shadow-softlg">
             <Image
-              src="/products/real/charms-in-hand.jpg"
-              alt="A handful of tiny decoden charms, ready to be placed by hand"
+              src={content.makerImage}
+              alt={content.makerTitle}
               fill
               sizes="280px"
               className="object-cover"
@@ -259,65 +212,89 @@ export default async function HomePage() {
           </div>
           <div>
             <span className="pill-tag">Meet the Maker</span>
-            <h3 className="mt-4 font-heading text-2xl font-semibold text-ink sm:text-3xl">
-              Hi, I&apos;m Iram 👋
-            </h3>
-            <p className="mt-4 text-ink/70">
-              I&apos;m the one-person team behind every piece here — designer,
-              charm-placer, packer, and the person who answers your emails.
-              I&apos;m based in India, obsessed with all things kawaii and
-              pastel, and I built CutesyStudioCo around one simple goal:
-              bringing joy to the world, one cute thing at a time.
-            </p>
+            <h3 className="mt-4 font-heading text-2xl font-semibold text-ink sm:text-3xl">{content.makerTitle}</h3>
+            <p className="mt-4 whitespace-pre-line text-ink/70">{content.makerText}</p>
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 inline-flex items-center gap-2 font-heading text-sm font-semibold text-pastel hover:text-pastel-dark"
             >
-              <InstagramIcon className="h-4 w-4" /> Follow the process {SITE.instagramHandle}
+              <InstagramIcon className="h-4 w-4" /> Follow the process {settings.instagramHandle}
             </a>
           </div>
         </div>
         <WaveDivider className="text-cream" />
       </section>
 
-      {/* Reviews */}
+      {/* Reviews — approved customer reviews only (Admin → Reviews) */}
       <section id="reviews" className="scroll-mt-16 bg-lavender-light px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-6xl text-center">
           <span className="pill-tag mx-auto">Reviews</span>
-          <h2 className="section-heading mt-4">We&apos;re brand new — you could be our first review</h2>
-          <p className="mx-auto mt-4 max-w-md text-ink/70">
-            We&apos;d rather have zero reviews than made-up ones. This section is
-            genuinely empty for now — every review here will be from a real
-            order, not a stock photo of a stranger.
-          </p>
-          <div className="mt-6 flex justify-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <StarIcon key={i} className="h-6 w-6 text-ink/15" />
-            ))}
-          </div>
-          <p className="mt-3 text-sm text-ink/60">
-            No ratings yet — be the first to order and tell us what you think.
-          </p>
+          {reviews.length > 0 ? (
+            <>
+              <h2 className="section-heading mt-4">Loved by our customers</h2>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <div className="flex gap-0.5" aria-label={`${averageRating.toFixed(1)} out of 5 stars`}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <StarIcon key={i} className={`h-6 w-6 ${i < Math.round(averageRating) ? "text-amber-400" : "text-ink/15"}`} />
+                  ))}
+                </div>
+                <span className="font-heading font-semibold text-ink">
+                  {averageRating.toFixed(1)} · {reviews.length} review{reviews.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="mt-10 grid grid-cols-1 gap-5 text-left sm:grid-cols-2 lg:grid-cols-3">
+                {reviews.slice(0, 9).map((review) => (
+                  <figure key={review.id} className="card flex flex-col p-6">
+                    {review.image_url && (
+                      <div className="relative mb-4 aspect-square overflow-hidden rounded-xl2 bg-blush-light">
+                        <Image src={review.image_url} alt={`Photo from ${review.name}`} fill unoptimized sizes="(min-width: 1024px) 30vw, 90vw" className="object-cover" />
+                      </div>
+                    )}
+                    <div className="flex gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <StarIcon key={i} className={`h-4 w-4 ${i < review.rating ? "text-amber-400" : "text-ink/15"}`} />
+                      ))}
+                    </div>
+                    <blockquote className="mt-3 flex-1 whitespace-pre-line text-sm text-ink/80">{review.body}</blockquote>
+                    <figcaption className="mt-4 font-heading text-sm font-semibold text-ink">
+                      {review.name}
+                      {review.location && <span className="font-normal text-ink/50"> · {review.location}</span>}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="section-heading mt-4">We&apos;re brand new — you could be our first review</h2>
+              <p className="mx-auto mt-4 max-w-md text-ink/70">
+                We&apos;d rather have zero reviews than made-up ones. Every review here will be from a real order,
+                not a stock photo of a stranger.
+              </p>
+              <div className="mt-6 flex justify-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <StarIcon key={i} className="h-6 w-6 text-ink/15" />
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="mx-auto mt-10 grid max-w-xl grid-cols-1 gap-6 sm:grid-cols-2">
-            <a
-              href={`mailto:${SITE.email}?subject=My%20CutesyStudioCo%20review`}
+            <Link
+              href="/review"
               className="card flex flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
             >
               <span className="rounded-full bg-blush-light p-4">
-                <MailIcon className="h-6 w-6 text-pastel" />
+                <StarIcon className="h-6 w-6 text-pastel" />
               </span>
-              <h3 className="font-heading font-semibold text-ink">Email Your Review</h3>
-              <p className="text-sm text-ink/60">
-                Already ordered? Send us a few lines (and a photo, if you&apos;d
-                like) and we&apos;ll feature it here with your permission.
-              </p>
-            </a>
+              <h3 className="font-heading font-semibold text-ink">Write a Review</h3>
+              <p className="text-sm text-ink/60">Already ordered? Tell us what you think — it takes a minute.</p>
+            </Link>
 
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="card flex flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
@@ -327,8 +304,8 @@ export default async function HomePage() {
               </span>
               <h3 className="font-heading font-semibold text-ink">Tag Us on Instagram</h3>
               <p className="text-sm text-ink/60">
-                Post your piece and tag {SITE.instagramHandle} — we regularly
-                share (and love seeing) unboxing photos.
+                Post your piece and tag {settings.instagramHandle} — we regularly share (and love seeing) unboxing
+                photos.
               </p>
             </a>
           </div>
@@ -339,7 +316,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col items-center text-center">
-            <h2 className="section-heading">Follow along {SITE.instagramHandle}</h2>
+            <h2 className="section-heading">Follow along {settings.instagramHandle}</h2>
             <p className="mt-3 max-w-xl text-ink/70">
               Behind-the-scenes decoden process, new drops, and way too many
               close-up shots of tiny charms. Come say hi!
@@ -370,7 +347,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="relative mx-auto mt-10 block aspect-[2/3] w-full max-w-xs overflow-hidden rounded-xl3 shadow-soft transition-transform hover:scale-[1.02]"
@@ -387,12 +364,12 @@ export default async function HomePage() {
           )}
           <div className="mt-8 text-center">
             <a
-              href={SITE.instagramUrl}
+              href={settings.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 font-heading text-sm font-semibold text-pastel hover:text-pastel-dark"
             >
-              <InstagramIcon className="h-4 w-4" /> {SITE.instagramHandle}
+              <InstagramIcon className="h-4 w-4" /> {settings.instagramHandle}
             </a>
           </div>
         </div>
@@ -423,16 +400,16 @@ export default async function HomePage() {
             <p className="text-sm text-ink/60">Fastest reply — great for custom orders</p>
           </a>
 
-          <a href={`mailto:${SITE.email}`} className="card flex flex-col items-center gap-3 p-8 text-center">
+          <a href={`mailto:${settings.contactEmail}`} className="card flex flex-col items-center gap-3 p-8 text-center">
             <span className="rounded-full bg-blush-light p-4">
               <MailIcon className="h-6 w-6 text-pastel" />
             </span>
             <h3 className="font-heading font-semibold text-ink">Email Us</h3>
-            <p className="break-all text-sm text-ink/60">{SITE.email}</p>
+            <p className="break-all text-sm text-ink/60">{settings.contactEmail}</p>
           </a>
 
           <a
-            href={SITE.instagramUrl}
+            href={settings.instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="card flex flex-col items-center gap-3 p-8 text-center"
@@ -441,7 +418,7 @@ export default async function HomePage() {
               <InstagramIcon className="h-6 w-6 text-pastel" />
             </span>
             <h3 className="font-heading font-semibold text-ink">Instagram</h3>
-            <p className="text-sm text-ink/60">{SITE.instagramHandle}</p>
+            <p className="text-sm text-ink/60">{settings.instagramHandle}</p>
           </a>
         </div>
 
