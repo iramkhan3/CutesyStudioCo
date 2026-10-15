@@ -7,7 +7,14 @@ export const SITE = {
   instagramHandle: "@cutesystudioco",
   instagramUrl: "https://www.instagram.com/cutesystudioco",
   email: "hello.cutesystudioco@gmail.com",
+  // Digits only, with country code — the format wa.me links need.
+  whatsappNumber: "919167829289",
 } as const;
+
+/** wa.me chat link, optionally with a pre-filled message. */
+export function whatsappLink(message?: string): string {
+  return `https://wa.me/${SITE.whatsappNumber}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+}
 
 // Shown wherever a customer is about to order (or has ordered) a made-to-order
 // custom piece — the /custom page, the builder itself, cart, and checkout.
@@ -79,10 +86,108 @@ export const CATEGORIES = [
   },
   {
     slug: "posters",
-    name: "Posters",
-    tagline: "Wall art straight from a dream room",
+    name: "Custom Posters & Postcards",
+    tagline: "Wall art and little notes, made just for you",
     description:
-      "Soft, pastel, sparkle-dusted print designs for the wall behind your desk, bed, or vanity — because even your walls deserve decoden energy.",
+      "Soft, pastel, sparkle-dusted posters and postcards, customized with your names, dates, or favorite characters — for the wall behind your desk, or to tuck into a gift.",
+  },
+  {
+    slug: "small-plushies",
+    name: "Small Plushies",
+    tagline: "Tiny, squishy, and very huggable",
+    description:
+      "Pocket-sized plush friends in pastel shades — perfect for your desk, your bag, or gifting to someone who needs a little extra cute in their day.",
+  },
+  {
+    slug: "bag-charms",
+    name: "Bag Charms",
+    tagline: "Sweet little danglers for every bag",
+    description:
+      "Charm-covered clips and danglers that turn any tote, backpack, or purse into a mini decoden showpiece.",
+  },
+  {
+    slug: "water-bottles",
+    name: "Water Bottles",
+    tagline: "Hydration, but make it kawaii",
+    description:
+      "Everyday bottles dressed up with cute charms and pastel details — so cute you'll actually remember to drink water.",
+  },
+  {
+    slug: "accessories",
+    name: "Accessories",
+    tagline: "All the extra little cute things",
+    description:
+      "Hair clips, pens, trinkets and other little extras, each finished by hand with charms and decoden cream.",
+  },
+  {
+    slug: "combos",
+    name: "Combos",
+    tagline: "Matching sets, sweeter together",
+    description:
+      "Coordinated sets — think phone case, keychain, and mirror in the same theme — bundled together so your whole everyday carry matches.",
+  },
+  {
+    slug: "mystery-box",
+    name: "Mystery Box",
+    tagline: "A surprise bundle of cute",
+    description:
+      "Tell us your vibe and we'll pack a box of handpicked decoden goodies for you — you won't know exactly what's inside until you open it.",
+  },
+  {
+    slug: "earbuds-cases",
+    name: "Earbuds Cases",
+    tagline: "Tiny cases, big charm",
+    description:
+      "AirPods and earbud cases covered in pastel cream swirls and mini charms — the perfect match for your decoden phone case.",
+  },
+  {
+    slug: "hair-clips",
+    name: "Hair Clips",
+    tagline: "Little sparkles for your hair",
+    description:
+      "Snap clips and barrettes topped with cute charms and tiny bows — easy to wear, easy to gift, impossible to have just one.",
+  },
+  {
+    slug: "claw-clips",
+    name: "Claw Clips",
+    tagline: "Effortless updos, extra cute",
+    description:
+      "Sturdy claw clips decorated with charms and decoden cream, so even a messy bun looks like a statement.",
+  },
+  {
+    slug: "stationery",
+    name: "Stationery",
+    tagline: "Desk essentials, kawaii edition",
+    description:
+      "Pens, pencil cases, and desk goodies dressed in charms and pastel cream — study sessions and to-do lists, but cuter.",
+  },
+  {
+    slug: "gift-hampers",
+    name: "Gift Hampers",
+    tagline: "Ready-to-gift bundles of joy",
+    description:
+      "Curated hampers for birthdays, festivals, and special days — beautifully packed and filled with handmade decoden pieces.",
+  },
+  {
+    slug: "photo-frames",
+    name: "Photo Frames",
+    tagline: "Frame your favorite memories",
+    description:
+      "Charm-covered frames, personalized if you like, that turn your favorite photos into little works of art.",
+  },
+  {
+    slug: "laptop-kindle-sleeves",
+    name: "Laptop & Kindle Sleeves",
+    tagline: "Cozy covers for your gadgets",
+    description:
+      "Protective sleeves for laptops and Kindles, finished with decoden details — keeping your devices safe and adorable.",
+  },
+  {
+    slug: "bulk-gifting",
+    name: "Bulk Gifting",
+    tagline: "Cute gifts for every guest",
+    description:
+      "Matching handmade favors for weddings, bridesmaids, birthdays, and corporate gifting — message us with your quantity and theme for a custom quote.",
   },
   {
     slug: "ready-to-ship",
@@ -99,6 +204,10 @@ export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
 // threshold. Both are evaluated against the pre-discount cart subtotal.
 export const SHIPPING_FLAT_RATE_INR = 99;
 export const FREE_SHIPPING_THRESHOLD_INR = 900;
+// International (non-India) orders get free shipping at or above this USD
+// order value (after discounts). Applied to PayPal orders, which are
+// charged in USD — see calculateShippingUsd() in lib/shipping.ts.
+export const FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL = 75;
 
 // International shipping — zone-based flat rates, since we don't have a live
 // courier API (Shiprocket/DHL/EasyPost etc.) wired up yet. This is a
@@ -342,6 +451,11 @@ export type Coupon = {
   // At most one active, autoApply coupon should exist at a time — it's
   // applied automatically with no code needed. See lib/coupons.ts.
   autoApply: boolean;
+  // Shipping override by destination — INR for orders shipping within India,
+  // USD for international orders. null = normal shipping rules; 0 = free; any other amount
+  // = flat shipping charge replacing the usual rate. See lib/shipping.ts.
+  shippingOverrideInr: number | null;
+  shippingOverrideUsd: number | null;
 };
 
 // Fallback used until supabase/schema.sql's `coupons` table migration is run
@@ -349,6 +463,6 @@ export type Coupon = {
 // on/off (`active`) and auto-apply are per-coupon flags the admin can edit,
 // instead of a separate LAUNCH_OFFER_ACTIVE constant.
 export const COUPONS: Record<string, Coupon> = {
-  CUTEJOY30: { code: "CUTEJOY30", percentOff: 30, minPurchaseInr: 500, active: true, autoApply: false },
-  LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0, active: true, autoApply: true },
+  CUTEJOY30: { code: "CUTEJOY30", percentOff: 30, minPurchaseInr: 500, active: true, autoApply: false, shippingOverrideInr: null, shippingOverrideUsd: null },
+  LAUNCH50: { code: "LAUNCH50", percentOff: 50, minPurchaseInr: 0, active: true, autoApply: true, shippingOverrideInr: null, shippingOverrideUsd: null },
 };

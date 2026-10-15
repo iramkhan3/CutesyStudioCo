@@ -18,7 +18,15 @@ export type CouponResult = {
  * amount computed anywhere but here, run against the server's own subtotal,
  * with the server's own `coupons` list.
  */
-export function calculateDiscount(subtotalInr: number, code: string | null | undefined, coupons: Coupon[]): CouponResult {
+export function calculateDiscount(
+  subtotalInr: number,
+  code: string | null | undefined,
+  coupons: Coupon[],
+  // For a USD (PayPal) order, `subtotalInr` is really the USD subtotal (the
+  // percentage math is currency-agnostic) — pass its INR equivalent here so
+  // the coupon's ₹ minimum purchase is compared like-for-like.
+  subtotalInrForMinimum: number = subtotalInr
+): CouponResult {
   const autoApply = coupons.find((c) => c.autoApply) ?? null;
   const effectiveCode = code && code.trim() ? code : autoApply?.code ?? null;
 
@@ -31,11 +39,11 @@ export function calculateDiscount(subtotalInr: number, code: string | null | und
     return { discount: 0, coupon: null, error: "That coupon code isn't valid." };
   }
 
-  if (subtotalInr < coupon.minPurchaseInr) {
+  if (subtotalInrForMinimum < coupon.minPurchaseInr) {
     return {
       discount: 0,
       coupon: null,
-      error: `Add ₹${(coupon.minPurchaseInr - subtotalInr).toFixed(2)} more to use ${coupon.code}.`,
+      error: `Add ₹${(coupon.minPurchaseInr - subtotalInrForMinimum).toFixed(2)} more to use ${coupon.code}.`,
     };
   }
 

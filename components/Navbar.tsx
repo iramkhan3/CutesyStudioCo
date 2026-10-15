@@ -34,7 +34,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-ink/5 bg-cream/90 backdrop-blur-md">
       {autoApplyCoupon && (
         <div className="bg-gradient-to-r from-pastel-dark to-pastel px-4 py-2 text-center font-heading text-xs font-semibold text-white sm:text-sm">
-          🎉 Launch Offer — Flat {autoApplyCoupon.percentOff}% Off Everything, No Code Needed!
+          🎉 Launch Offer — Flat {autoApplyCoupon.percentOff}% Off Everything in India, No Code Needed!
         </div>
       )}
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">

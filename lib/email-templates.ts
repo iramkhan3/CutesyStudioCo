@@ -4,7 +4,7 @@
 // component) reads directly for its sidebar + "reset to default" button,
 // same pattern as CATEGORIES/CUSTOM_CASE_THEMES in lib/constants.ts.
 import type { OrderRecord } from "@/lib/types";
-import { SITE } from "@/lib/constants";
+import { SITE, whatsappLink } from "@/lib/constants";
 
 export type EmailTemplateKey =
   | "order_confirmation"
@@ -12,7 +12,8 @@ export type EmailTemplateKey =
   | "order_delivered"
   | "order_cancelled"
   | "admin_new_order"
-  | "newsletter_welcome";
+  | "newsletter_welcome"
+  | "abandoned_cart";
 
 export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "order_confirmation",
@@ -21,6 +22,7 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "order_cancelled",
   "admin_new_order",
   "newsletter_welcome",
+  "abandoned_cart",
 ];
 
 export type EmailTemplate = {
@@ -51,6 +53,16 @@ const TRACKING_VARS = [
   { token: "tracking_row", description: "Pre-formatted tracking block (blank if nothing was entered)." },
 ] as const;
 
+const REVIEW_VARS = [
+  { token: "review_link", description: "Link that opens an email to you, pre-filled for the customer's review of this order." },
+  { token: "review_button", description: "Ready-made \"Tell us what you think\" block with the review link and Instagram tag." },
+] as const;
+
+const ABANDONED_CART_VARS = [
+  { token: "resume_link", description: "Link back to the shop so the customer can finish their order." },
+  { token: "whatsapp_link", description: "Link to chat with you on WhatsApp." },
+] as const;
+
 const ADMIN_VARS = [
   { token: "admin_order_link", description: "Direct link to this order in your admin dashboard." },
 ] as const;
@@ -65,10 +77,11 @@ const NEWSLETTER_VARS = [
 export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKey, readonly { token: string; description: string }[]> = {
   order_confirmation: BASE_VARS,
   order_shipped: [...BASE_VARS, ...TRACKING_VARS],
-  order_delivered: BASE_VARS,
+  order_delivered: [...BASE_VARS, ...REVIEW_VARS],
   order_cancelled: BASE_VARS,
   admin_new_order: [...BASE_VARS, ...ADMIN_VARS],
   newsletter_welcome: NEWSLETTER_VARS,
+  abandoned_cart: [...BASE_VARS, ...ABANDONED_CART_VARS],
 };
 
 const EMAIL_WRAPPER_OPEN = `<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">`;
@@ -121,6 +134,7 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
     html: `${EMAIL_WRAPPER_OPEN}
       <h1 style="color:#D291BC;">Your order has arrived! 🎀</h1>
       <p>Hi {{customer_name}}, order <strong>#{{order_id}}</strong> has been marked delivered — we hope it made your day a little cuter!</p>
+      {{review_button}}
       <p>If anything about your order isn't right, just reply to this email or reach us at {{site_email}} and we'll sort it out.</p>
       ${SIGNOFF}
     ${EMAIL_WRAPPER_CLOSE}`,
@@ -169,6 +183,23 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
       {{discount_row}}
       <p><a href="{{shop_link}}" style="color:#D291BC;">Browse the shop &rarr;</a></p>
       <p>Questions any time? Just reply to this email or reach us at {{site_email}}.</p>
+      ${SIGNOFF}
+    ${EMAIL_WRAPPER_CLOSE}`,
+  },
+  abandoned_cart: {
+    key: "abandoned_cart",
+    name: "Abandoned checkout reminder",
+    subject: "You left something cute behind 🎀",
+    active: true,
+    html: `${EMAIL_WRAPPER_OPEN}
+      <h1 style="color:#D291BC;">Still thinking it over? 🎀</h1>
+      <p>Hi {{customer_name}}, you started checking out at {{site_name}} but didn't finish — your picks are still waiting for you:</p>
+      <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+        {{items_table}}
+      </table>
+      <p>Most of our pieces are one-of-a-kind, so once they're gone, they're gone!</p>
+      <p style="text-align:center; margin:24px 0;"><a href="{{resume_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Finish my order</a></p>
+      <p>Had trouble paying, or have a question? <a href="{{whatsapp_link}}" style="color:#D291BC;">Message us on WhatsApp</a> or just reply to this email.</p>
       ${SIGNOFF}
     ${EMAIL_WRAPPER_CLOSE}`,
   },
@@ -223,6 +254,8 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
     .map((line) => escapeHtml(line as string))
     .join("<br/>");
 
+  const reviewLink = `mailto:${SITE.email}?subject=${encodeURIComponent(`My review — order #${order.id.slice(0, 8)}`)}`;
+
   const trackingRow =
     order.tracking_number || order.courier
       ? `<p style="margin:16px 0; padding:12px; background:#FBEFF3; border-radius:12px;"><strong>Tracking:</strong> ${escapeHtml(order.tracking_number || "—")}${order.courier ? ` via ${escapeHtml(order.courier)}` : ""}</p>`
@@ -244,6 +277,10 @@ export function buildOrderVars(order: OrderRecord): Record<string, string> {
     courier: order.courier ?? "",
     tracking_row: trackingRow,
     admin_order_link: `${SITE.url}/admin/orders/${order.id}`,
+    review_link: reviewLink,
+    review_button: `<p style="margin:16px 0; padding:16px; background:#FBEFF3; border-radius:12px; text-align:center;">Loved your piece? We'd be so grateful for a review! 💕<br/><a href="${reviewLink}" style="display:inline-block; margin-top:10px; padding:10px 20px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Tell us what you think</a><br/><span style="font-size:13px; color:#9B8589;">Send a few lines (and a photo, if you like) — or tag ${SITE.instagramHandle} on Instagram.</span></p>`,
+    resume_link: `${SITE.url}/shop`,
+    whatsapp_link: whatsappLink(`Hi! I have a question about my order at ${SITE.name}.`),
   };
 }
 

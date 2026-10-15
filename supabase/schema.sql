@@ -95,6 +95,93 @@ alter table orders add column if not exists tracking_number text;
 alter table orders add column if not exists courier text;
 alter table orders add column if not exists admin_notes text;
 
+-- Stock reservation (prevents selling a one-of-one piece twice). Checkout
+-- reserves stock atomically the moment an order is created; a second buyer
+-- for the same last item is told it's sold out *before* paying. Reservations
+-- are returned if payment fails or the checkout is abandoned (> 30 min, see
+-- lib/orders.ts). Paid orders keep their reservation — that IS the decrement.
+alter table orders add column if not exists stock_reserved boolean not null default false;
+
+-- When the one-time "you left something behind" email went out for this
+-- unpaid checkout (lib/abandoned-carts.ts, run daily by Vercel Cron).
+alter table orders add column if not exists abandoned_reminder_sent_at timestamptz;
+
+-- All-or-nothing: either every product item in the order is in stock and
+-- decremented, or nothing changes and it returns false.
+create or replace function reserve_order_stock(p_order_id uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  item jsonb;
+begin
+  for item in
+    select * from jsonb_array_elements(
+      coalesce((select items from orders where id = p_order_id and payment_status = 'pending' and not stock_reserved), '[]'::jsonb)
+    )
+  loop
+    if item->>'kind' = 'product' then
+      update products set stock_quantity = stock_quantity - (item->>'quantity')::int
+        where id = (item->>'productId')::uuid and stock_quantity >= (item->>'quantity')::int;
+      if not found then
+        raise exception 'out_of_stock';
+      end if;
+    end if;
+  end loop;
+  update orders set stock_reserved = true where id = p_order_id and payment_status = 'pending';
+  return true;
+exception when raise_exception then
+  -- Rolls back every decrement made above in this call.
+  return false;
+end;
+$$;
+
+-- Returns an unpaid order's reserved stock. Safe to call more than once and
+-- never touches a paid order (the paid check happens in the same row update).
+create or replace function release_order_stock(p_order_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  item jsonb;
+  v_items jsonb;
+begin
+  update orders set stock_reserved = false
+    where id = p_order_id and stock_reserved and payment_status <> 'paid'
+    returning items into v_items;
+  if v_items is null then
+    return;
+  end if;
+  for item in select * from jsonb_array_elements(v_items) loop
+    if item->>'kind' = 'product' then
+      update products set stock_quantity = stock_quantity + (item->>'quantity')::int
+        where id = (item->>'productId')::uuid;
+    end if;
+  end loop;
+end;
+$$;
+
+-- Releases reservations held by checkouts abandoned for longer than
+-- p_minutes. The order stays "pending" so a very late payment is still
+-- recorded as paid (it then falls back to a plain stock decrement).
+create or replace function release_stale_reservations(p_minutes integer) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  r record;
+begin
+  for r in
+    select id from orders
+    where stock_reserved and payment_status <> 'paid' and created_at < now() - make_interval(mins => p_minutes)
+  loop
+    perform release_order_stock(r.id);
+  end loop;
+end;
+$$;
+
+-- Server-only: the public anon key must never be able to change stock.
+revoke execute on function reserve_order_stock(uuid) from public, anon, authenticated;
+revoke execute on function release_order_stock(uuid) from public, anon, authenticated;
+revoke execute on function release_stale_reservations(integer) from public, anon, authenticated;
+grant execute on function reserve_order_stock(uuid) to service_role;
+grant execute on function release_order_stock(uuid) to service_role;
+grant execute on function release_stale_reservations(integer) to service_role;
+
 alter table orders enable row level security;
 
 create index if not exists orders_razorpay_order_id_idx on orders (razorpay_order_id);
@@ -152,6 +239,13 @@ create table if not exists coupons (
   active boolean not null default true,
   auto_apply boolean not null default false
 );
+
+-- Per-coupon shipping override, by destination: _inr for orders shipping
+-- within India, _usd for international orders (converted at USD_INR_RATE if
+-- the order is charged in the other currency). null = normal shipping rules
+-- (lib/shipping.ts), 0 = free shipping, any other amount = flat charge.
+alter table coupons add column if not exists shipping_override_inr numeric(10, 2);
+alter table coupons add column if not exists shipping_override_usd numeric(10, 2);
 
 alter table coupons enable row level security;
 
@@ -223,6 +317,7 @@ insert into email_templates (key, name, subject, html, active) values
   $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
   <h1 style="color:#D291BC;">Your order has arrived! 🎀</h1>
   <p>Hi {{customer_name}}, order <strong>#{{order_id}}</strong> has been marked delivered — we hope it made your day a little cuter!</p>
+  {{review_button}}
   <p>If anything about your order isn't right, just reply to this email or reach us at {{site_email}} and we'll sort it out.</p>
   <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
 </div>$html$,
@@ -274,6 +369,23 @@ insert into email_templates (key, name, subject, html, active) values
   <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
 </div>$html$,
   true
+),
+(
+  'abandoned_cart',
+  'Abandoned checkout reminder',
+  $subj$You left something cute behind 🎀$subj$,
+  $html$<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #5B4B4F;">
+  <h1 style="color:#D291BC;">Still thinking it over? 🎀</h1>
+  <p>Hi {{customer_name}}, you started checking out at {{site_name}} but didn't finish — your picks are still waiting for you:</p>
+  <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+    {{items_table}}
+  </table>
+  <p>Most of our pieces are one-of-a-kind, so once they're gone, they're gone!</p>
+  <p style="text-align:center; margin:24px 0;"><a href="{{resume_link}}" style="display:inline-block; padding:12px 24px; background:#D291BC; color:#ffffff; border-radius:999px; text-decoration:none; font-weight:bold;">Finish my order</a></p>
+  <p>Had trouble paying, or have a question? <a href="{{whatsapp_link}}" style="color:#D291BC;">Message us on WhatsApp</a> or just reply to this email.</p>
+  <p style="margin-top:24px;">With love,<br/>{{site_name}}</p>
+</div>$html$,
+  true
 )
 on conflict (key) do nothing;
 
@@ -290,6 +402,11 @@ create table if not exists category_order (
   rank integer not null
 );
 
+-- Admin on/off switch per category (Admin → Categories). Disabled categories
+-- are hidden from the storefront along with all their products, and those
+-- products can't be checked out. Products themselves are left untouched.
+alter table category_order add column if not exists enabled boolean not null default true;
+
 alter table category_order enable row level security;
 
 insert into category_order (slug, rank) values
@@ -302,7 +419,21 @@ insert into category_order (slug, rank) values
   ('mirrors', 6),
   ('keychains', 7),
   ('posters', 8),
-  ('ready-to-ship', 9)
+  ('ready-to-ship', 9),
+  ('small-plushies', 10),
+  ('bag-charms', 11),
+  ('water-bottles', 12),
+  ('accessories', 13),
+  ('combos', 14),
+  ('mystery-box', 15),
+  ('earbuds-cases', 16),
+  ('hair-clips', 17),
+  ('claw-clips', 18),
+  ('stationery', 19),
+  ('gift-hampers', 20),
+  ('photo-frames', 21),
+  ('laptop-kindle-sleeves', 22),
+  ('bulk-gifting', 23)
 on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -351,14 +482,7 @@ values
   ('10000000-0000-0000-0000-000000000027', 'ready-to-ship-merry-mirror', 'Ready-to-Ship Merry Mirror', 'mirrors', 'A round hand mirror wreathed in holiday cream — Santa, snowman, gingerbread, and reindeer charms tucked among holly and "MERRY" lettering. One-of-one, ships in 1-2 days.', 399, 200, 2.41, '{/products/real/merry-mirror.jpg}', 1, true),
   ('10000000-0000-0000-0000-000000000028', 'ready-to-ship-merry-trinket-box', 'Ready-to-Ship Merry Trinket Box', 'jewelry-boxes', 'A holiday trinket box piped in red and green cream, loaded with Santa, snowman, gingerbread, reindeer, and gift-box charms and a "MERRY" charm on the lid. One-of-one, ships in 1-2 days.', 899, 450, 5.42, '{/products/real/merry-trinket-box-1.jpg,/products/real/merry-trinket-box-2.jpg}', 1, true),
   ('10000000-0000-0000-0000-000000000029', 'ready-to-ship-hello-kitty-bag-charm', 'Ready-to-Ship Hello Kitty Bag Charm', 'keychains', 'A Hello Kitty bag charm dressed in pink cream swirls, bows, and a little "LOVE" charm — the easiest way to decoden-ify your bag or keys. One-of-one, ships in 1-2 days.', 349, 175, 2.11, '{/products/real/hello-kitty-bag-charm.jpg}', 1, true)
-on conflict (id) do update set
-  slug = excluded.slug,
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  mrp_inr = excluded.mrp_inr,
-  price_inr = excluded.price_inr,
-  price_usd = excluded.price_usd,
-  images = excluded.images,
-  stock_quantity = excluded.stock_quantity,
-  active = excluded.active;
+-- `do nothing`, NOT `do update`: these rows are only a first-run seed. Once
+-- the live catalog has been edited from the admin dashboard (prices, photos,
+-- active on/off), re-running this file must never reset those edits.
+on conflict (id) do nothing;

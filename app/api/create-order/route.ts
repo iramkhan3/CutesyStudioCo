@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProductsByIds } from "@/lib/products";
 import { getRazorpayClient } from "@/lib/razorpay";
-import { createPendingOrder, attachRazorpayOrderId } from "@/lib/orders";
+import { createPendingOrder, attachRazorpayOrderId, markOrderFailed, reserveOrderStock } from "@/lib/orders";
 import { calculateDiscount } from "@/lib/coupons";
 import { getCoupons } from "@/lib/coupons-data";
 import { calculateShipping } from "@/lib/shipping";
@@ -119,6 +119,9 @@ export async function POST(req: Request) {
   // --- authoritative pricing/stock from the database, never the client --
   const productIds = items.filter((i) => i.kind === "product").map((i) => i.productId);
   const products = productIds.length ? await getProductsByIds(productIds) : [];
+  if (!products) {
+    return NextResponse.json({ error: "We couldn't confirm your items right now. Please try again in a moment." }, { status: 503 });
+  }
 
   const orderItems: OrderItemSnapshot[] = [];
   for (const item of items) {
@@ -177,7 +180,7 @@ export async function POST(req: Request) {
   }
 
   const payableAmount = Math.max(0, subtotal - discount);
-  const shippingAmount = calculateShipping(payableAmount, shippingAddress.country);
+  const shippingAmount = calculateShipping(payableAmount, shippingAddress.country, coupon);
   const totalAmount = payableAmount + shippingAmount;
 
   const amountInPaise = Math.round(totalAmount * 100);
@@ -214,6 +217,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const reservation = await reserveOrderStock(order.id);
+  if (reservation === "out_of_stock" || reservation === "error") {
+    await markOrderFailed(order.id);
+    return reservation === "out_of_stock"
+      ? NextResponse.json(
+          { error: "Sorry — someone just bought one of the pieces in your cart. Please refresh your cart and try again." },
+          { status: 409 }
+        )
+      : NextResponse.json({ error: "Something went wrong reserving your items. Please try again." }, { status: 503 });
+  }
+
   try {
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
@@ -232,6 +246,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[create-order] Razorpay error:", err);
+    await markOrderFailed(order.id).catch(() => {});
     return NextResponse.json({ error: "Payment provider error. Please try again shortly." }, { status: 500 });
   }
 }

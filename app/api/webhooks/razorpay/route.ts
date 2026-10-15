@@ -84,7 +84,7 @@ export async function POST(req: Request) {
   // payment, its side effects already ran — don't double them here.
   if (!result.alreadyPaid) {
     await Promise.allSettled([
-      decrementStock(result.order.items).catch((err) =>
+      decrementStock(result.order).catch((err) =>
         console.error("[webhooks/razorpay] stock decrement failed:", err)
       ),
       sendOrderConfirmationEmail(result.order).catch((err) =>

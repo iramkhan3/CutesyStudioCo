@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     // captured by Razorpay and marked paid in our DB then reads to the
     // customer as an outright failure.
     await Promise.allSettled([
-      decrementStock(order.items).catch((err) =>
+      decrementStock(order).catch((err) =>
         console.error("[verify-payment] stock decrement failed:", err)
       ),
       sendOrderConfirmationEmail(order).catch((err) =>

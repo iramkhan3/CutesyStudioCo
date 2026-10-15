@@ -78,6 +78,10 @@ export async function sendAdminNewOrderNotification(order: OrderRecord) {
   return sendTemplatedEmail("admin_new_order", SITE.email, buildOrderVars(order));
 }
 
+export async function sendAbandonedCartEmail(order: OrderRecord) {
+  return sendTemplatedEmail("abandoned_cart", order.email, buildOrderVars(order));
+}
+
 export async function sendNewsletterWelcomeEmail(email: string, discount: { code: string; percentOff: number } | null) {
   return sendTemplatedEmail("newsletter_welcome", email, buildNewsletterVars(discount));
 }

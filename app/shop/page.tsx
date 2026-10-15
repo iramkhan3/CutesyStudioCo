@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { CategoryFilter } from "@/components/CategoryFilter";
-import { getProductsByCategory } from "@/lib/products";
+import { getAllProducts, getProductsByCategory } from "@/lib/products";
+import { getDisabledCategories } from "@/lib/category-order-data";
 import { CATEGORIES, SITE, type CategorySlug } from "@/lib/constants";
 import { WandIcon } from "@/components/Icons";
+import { BackButton } from "@/components/BackButton";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Shop Decoden Phone Cases & Kawaii Accessories",
   description:
-    "Shop handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, and posters online in India — every piece covered in cute charms and satisfying swirls of decoden cream.",
+    "Shop handmade decoden phone cases, tablet cases, jewelry boxes, mirrors, keychains, bag charms, plushies, water bottles, custom posters and postcards online in India — every piece covered in cute charms and satisfying swirls of decoden cream.",
   keywords: [
     "decoden phone case india",
     "kawaii phone case shop",
@@ -28,13 +30,20 @@ export default async function ShopPage({
 }: {
   searchParams: { category?: string };
 }) {
-  const categorySlug = CATEGORIES.find((c) => c.slug === searchParams.category)
+  const [allProducts, disabled] = await Promise.all([getAllProducts(), getDisabledCategories()]);
+  // A disabled category's URL behaves like an unknown one: show everything.
+  const categorySlug = CATEGORIES.find((c) => c.slug === searchParams.category && !disabled.has(c.slug))
     ?.slug as CategorySlug | undefined;
   const products = await getProductsByCategory(categorySlug);
   const activeCategory = CATEGORIES.find((c) => c.slug === categorySlug);
+  // "phone-cases" also lists ready-to-ship pieces (see getProductsByCategory).
+  const available = new Set(allProducts.map((p) => (p.category === "ready-to-ship" ? "phone-cases" : p.category)));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mb-6">
+        <BackButton fallbackHref="/" />
+      </div>
       <div className="text-center">
         <span className="pill-tag mx-auto">The Full Collection</span>
         <h1 className="mt-4 font-heading text-4xl font-bold text-ink sm:text-5xl">
@@ -65,7 +74,7 @@ export default async function ShopPage({
       </Link>
 
       <div className="mt-8 flex justify-center">
-        <CategoryFilter active={categorySlug} />
+        <CategoryFilter active={categorySlug} available={available} />
       </div>
 
       {products.length > 0 ? (

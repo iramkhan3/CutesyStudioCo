@@ -3,6 +3,8 @@ import { Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { NavigationTracker } from "@/components/BackButton";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
 
@@ -88,9 +90,11 @@ export default function RootLayout({
             areaServed: "IN",
           }}
         />
+        <NavigationTracker />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   );

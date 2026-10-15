@@ -6,11 +6,12 @@ import { CustomCaseBuilder } from "@/components/CustomCaseBuilder";
 import { DecorativeScatter } from "@/components/Decorative";
 import { WaveDivider } from "@/components/WaveDivider";
 import { HomeCarousel } from "@/components/HomeCarousel";
-import { SITE } from "@/lib/constants";
+import { SITE, whatsappLink } from "@/lib/constants";
 import { getAllProducts } from "@/lib/products";
 import { getCustomProductTypes } from "@/lib/custom-types";
 import { getCoupons } from "@/lib/coupons-data";
-import { InstagramIcon, MailIcon, SparkleIcon, StarIcon, WandIcon } from "@/components/Icons";
+import { getInstagramPosts } from "@/lib/instagram";
+import { ChevronRightIcon, InstagramIcon, MailIcon, SparkleIcon, StarIcon, WandIcon } from "@/components/Icons";
 
 const CAROUSEL_SLIDES = [
   { src: "/products/real/rainbow-hello-kitty-case.jpg", alt: "Pastel rainbow Hello Kitty decoden phone case" },
@@ -34,10 +35,11 @@ const INSTAGRAM_TEASER_IMAGE = "/marketing/one-of-a-kind-real-hands.jpg";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [products, customProductTypes, coupons] = await Promise.all([
+  const [products, customProductTypes, coupons, instagramPosts] = await Promise.all([
     getAllProducts(),
     getCustomProductTypes(),
     getCoupons(),
+    getInstagramPosts(),
   ]);
   // Manual admin display order (see /admin/products/reorder) — the top 9 is
   // the homepage's main highlight, per site design.
@@ -83,6 +85,11 @@ export default async function HomePage() {
             and it ships in 1-2 days. Love the design but need a different
             phone? Every design here can be custom-made for your exact model.
           </p>
+          {products.length > highlight.length && (
+            <Link href="/shop" className="btn-primary mt-6">
+              <SparkleIcon className="h-4 w-4" /> View All {products.length} Existing Designs →
+            </Link>
+          )}
         </div>
         {highlight.length > 0 ? (
           <>
@@ -91,11 +98,25 @@ export default async function HomePage() {
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-            <div className="mt-10 text-center">
-              <Link href="/shop" className="btn-secondary">
+            <Link
+              href="/shop"
+              className="group mt-12 flex flex-col items-center gap-4 rounded-xl3 bg-gradient-to-r from-pastel-dark to-pastel px-6 py-8 text-center text-white shadow-glow transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.01] sm:flex-row sm:justify-between sm:px-10 sm:text-left"
+            >
+              <span>
+                <span className="block font-heading text-2xl font-bold sm:text-3xl">
+                  {products.length > highlight.length
+                    ? `+${products.length - highlight.length} more designs waiting for you`
+                    : "See every design in one place"}
+                </span>
+                <span className="mt-1 block text-white/85">
+                  Browse the full collection — filter by category and find your favorite.
+                </span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 font-heading text-base font-bold text-pastel-dark shadow-soft transition-transform group-hover:scale-105">
                 View All Existing Designs
-              </Link>
-            </div>
+                <ChevronRightIcon className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
           </>
         ) : (
           <p className="mt-10 text-center text-ink/60">
@@ -161,6 +182,10 @@ export default async function HomePage() {
               <p className="mt-4 text-ink/70">
                 To celebrate going live, every single piece — ready-to-ship or
                 made to order — is {autoApplyCoupon.percentOff}% off, automatically, no code needed.
+              </p>
+              <p className="mt-2 text-sm text-ink/60">
+                🇮🇳 For orders paid in ₹ (within India). International orders paying via
+                PayPal aren&apos;t included in this offer.
               </p>
               <a href="#shop" className="btn-primary mt-6 inline-flex">
                 <SparkleIcon className="h-4 w-4" /> Shop the Sale
@@ -304,24 +329,46 @@ export default async function HomePage() {
               close-up shots of tiny charms. Come say hi!
             </p>
           </div>
-          {/* TODO: swap for a real Instagram feed embed (e.g. SnapWidget, Behold.so,
-              or the Instagram Basic Display API) once you have an embed key —
-              this is our own promo graphic as a stand-in for now. */}
-          <a
-            href={SITE.instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative mx-auto mt-10 block aspect-[2/3] w-full max-w-xs overflow-hidden rounded-xl3 shadow-soft transition-transform hover:scale-[1.02]"
-          >
-            <Image
-              src={INSTAGRAM_TEASER_IMAGE}
-              alt="CutesyStudioCo Instagram post preview"
-              fill
-              sizes="(min-width: 640px) 320px, 80vw"
-              className="object-cover"
-              priority
-            />
-          </a>
+          {/* Live feed via Behold.so (lib/instagram.ts) once INSTAGRAM_FEED_URL is
+              set; until then, our own promo graphic as a stand-in. */}
+          {instagramPosts.length > 0 ? (
+            <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {instagramPosts.map((post) => (
+                <a
+                  key={post.id}
+                  href={post.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative block aspect-square overflow-hidden rounded-xl2 shadow-soft transition-transform hover:scale-[1.03]"
+                >
+                  <Image
+                    src={post.imageUrl}
+                    alt={post.caption ? post.caption.slice(0, 120) : `${SITE.name} on Instagram`}
+                    fill
+                    unoptimized
+                    sizes="(min-width: 640px) 25vw, 50vw"
+                    className="object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          ) : (
+            <a
+              href={SITE.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative mx-auto mt-10 block aspect-[2/3] w-full max-w-xs overflow-hidden rounded-xl3 shadow-soft transition-transform hover:scale-[1.02]"
+            >
+              <Image
+                src={INSTAGRAM_TEASER_IMAGE}
+                alt="CutesyStudioCo Instagram post preview"
+                fill
+                sizes="(min-width: 640px) 320px, 80vw"
+                className="object-cover"
+                priority
+              />
+            </a>
+          )}
           <div className="mt-8 text-center">
             <a
               href={SITE.instagramUrl}
@@ -348,7 +395,18 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3">
+          <a
+            href={whatsappLink(`Hi ${SITE.name}! I have a question.`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card flex flex-col items-center gap-3 p-8 text-center"
+          >
+            <span className="rounded-full bg-[#25D366]/15 p-4 font-heading text-lg leading-6 text-[#128C7E]">💬</span>
+            <h3 className="font-heading font-semibold text-ink">WhatsApp</h3>
+            <p className="text-sm text-ink/60">Fastest reply — great for custom orders</p>
+          </a>
+
           <a href={`mailto:${SITE.email}`} className="card flex flex-col items-center gap-3 p-8 text-center">
             <span className="rounded-full bg-blush-light p-4">
               <MailIcon className="h-6 w-6 text-pastel" />

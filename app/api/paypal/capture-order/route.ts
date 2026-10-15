@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 
     // Best-effort side effects — payment is already confirmed valid above,
     // so neither of these should block the success response to the customer.
-    await decrementStock(paidOrder.items).catch((err) =>
+    await decrementStock(paidOrder).catch((err) =>
       console.error("[paypal/capture-order] stock decrement failed:", err)
     );
     await sendOrderConfirmationEmail(paidOrder).catch((err) =>

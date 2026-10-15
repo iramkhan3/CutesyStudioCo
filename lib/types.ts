@@ -115,5 +115,8 @@ export type OrderRecord = {
   tracking_number: string | null;
   courier: string | null;
   admin_notes: string | null;
+  // True while checkout holds this order's stock (see reserve_order_stock in
+  // supabase/schema.sql). Absent on rows from before that migration.
+  stock_reserved?: boolean;
   created_at: string;
 };

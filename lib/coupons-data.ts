@@ -8,10 +8,21 @@ type CouponRow = {
   min_purchase_inr: number;
   active: boolean;
   auto_apply: boolean;
+  // Missing entirely if the shipping override migration hasn't been run.
+  shipping_override_inr?: number | null;
+  shipping_override_usd?: number | null;
 };
 
 function rowToCoupon(row: CouponRow): Coupon {
-  return { code: row.code, percentOff: row.percent_off, minPurchaseInr: row.min_purchase_inr, active: row.active, autoApply: row.auto_apply };
+  return {
+    code: row.code,
+    percentOff: row.percent_off,
+    minPurchaseInr: row.min_purchase_inr,
+    active: row.active,
+    autoApply: row.auto_apply,
+    shippingOverrideInr: row.shipping_override_inr == null ? null : Number(row.shipping_override_inr),
+    shippingOverrideUsd: row.shipping_override_usd == null ? null : Number(row.shipping_override_usd),
+  };
 }
 
 /**

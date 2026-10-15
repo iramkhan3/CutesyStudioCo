@@ -156,6 +156,7 @@ export async function markOrderFailed(orderId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   await supabase.from("orders").update({ payment_status: "failed" }).eq("id", orderId);
+  await releaseOrderStock(orderId);
 }
 
 export async function getOrderById(orderId: string): Promise<OrderRecord | null> {
@@ -333,17 +334,69 @@ export async function updateOrderFulfillment(
   return normalizeOrder(data);
 }
 
+const STALE_RESERVATION_MINUTES = 30;
+
+export type ReserveResult = "reserved" | "out_of_stock" | "unavailable" | "error";
+
 /**
- * Best-effort stock decrement after a successful payment. Not run inside a
- * DB transaction with the order update — for a small handmade shop with low
- * concurrent order volume this is an acceptable tradeoff, but if you scale
- * up, move this into a Postgres RPC function that decrements atomically.
+ * Atomically reserves (decrements) stock for every product in a just-created
+ * pending order — the fix for two buyers both paying for the same last
+ * one-of-one piece. Returns "unavailable" when the reserve_order_stock()
+ * function hasn't been created yet (supabase/schema.sql not re-run), so
+ * checkout keeps working the old way (decrement after payment) until then.
  */
-export async function decrementStock(items: OrderItemSnapshot[]) {
+export async function reserveOrderStock(orderId: string): Promise<ReserveResult> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return "unavailable";
+
+  const { data, error } = await supabase.rpc("reserve_order_stock", { p_order_id: orderId });
+  if (error) {
+    if (["PGRST202", "42883"].includes(error.code ?? "")) return "unavailable";
+    console.error("[orders] reserve_order_stock failed:", error);
+    return "error";
+  }
+  return data === true ? "reserved" : "out_of_stock";
+}
+
+/** Returns an unpaid order's reserved stock (no-op if nothing is reserved). */
+export async function releaseOrderStock(orderId: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
+  const { error } = await supabase.rpc("release_order_stock", { p_order_id: orderId });
+  if (error && !["PGRST202", "42883"].includes(error.code ?? "")) {
+    console.error("[orders] release_order_stock failed:", error);
+  }
+}
 
-  for (const item of items) {
+/**
+ * Frees stock held by checkouts abandoned for 30+ minutes, so a piece doesn't
+ * stay "sold out" because someone closed the payment window. Called before
+ * product reads; best-effort, never throws.
+ */
+export async function releaseStaleReservations() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.rpc("release_stale_reservations", { p_minutes: STALE_RESERVATION_MINUTES });
+    if (error && !["PGRST202", "42883"].includes(error.code ?? "")) {
+      console.error("[orders] release_stale_reservations failed:", error);
+    }
+  } catch (err) {
+    console.error("[orders] release_stale_reservations failed:", err);
+  }
+}
+
+/**
+ * Stock decrement after a successful payment. Skipped when checkout already
+ * reserved the stock (stock_reserved — the normal case); otherwise (order
+ * created before the reservation migration, or a payment that arrived after
+ * its reservation expired) falls back to a best-effort decrement.
+ */
+export async function decrementStock(order: OrderRecord) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || order.stock_reserved) return;
+
+  for (const item of order.items) {
     if (item.kind !== "product") continue;
 
     const { data } = await supabase

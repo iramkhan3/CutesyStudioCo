@@ -47,9 +47,12 @@ isn't configured yet. Checkout and the newsletter signup will show a friendly
 2. In **Project Settings → API**, copy your **Project URL**, **anon public
    key**, and **service_role key**.
 3. In **SQL Editor**, paste and run the contents of
-   [supabase/schema.sql](supabase/schema.sql) — this creates the `products`,
-   `orders`, and `subscribers` tables, enables Row Level Security, and seeds
-   the product catalog (same data as the local fallback).
+   [supabase/schema.sql](supabase/schema.sql) — this creates every table,
+   enables Row Level Security, creates the stock-reservation functions, and
+   seeds starter data. **Re-run the whole file after every deploy that changes
+   it** — it's safe to re-run: it only adds missing columns/rows/functions and
+   never overwrites anything edited from the admin dashboard (see
+   [Database changes & data safety](#database-changes--data-safety)).
 4. Add the keys to your environment (see step 4 below). The app only ever
    uses the **service role key**, and only **server-side** (API routes /
    Server Components) — it's never sent to the browser.
@@ -119,6 +122,8 @@ cp .env.example .env.local
 | `ADMIN_PASSWORD` | Password for `/admin` (order management) | **No — server only** |
 | `ADMIN_SESSION_SECRET` | Signs the `/admin` session cookie | **No — server only** |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URL for SEO/OG tags & sitemap | Yes |
+| `CRON_SECRET` | Authorizes Vercel Cron to run the daily abandoned-checkout email job (`/api/cron/abandoned-carts`). Any long random string; Vercel sends it automatically. Without it the job refuses to run. | **No — server only** |
+| `INSTAGRAM_FEED_URL` | *(On hold — leave unset.)* Behold.so JSON feed URL for the homepage Instagram grid. Unset = the static promo image shows. | No |
 
 `.env` / `.env.local` are already git-ignored — never commit real secrets.
 
@@ -177,6 +182,35 @@ cp .env.example .env.local
    email.
 
 6. Either path redirects to `/order-confirmation?orderId=...`.
+
+**Stock reservation (both paths) — prevents selling a one-of-one twice.**
+Right after the `pending` order row is created, the create-order route
+calls the `reserve_order_stock()` Postgres function, which decrements stock
+for every product in the order **atomically, all-or-nothing** (`stock >=
+quantity` is checked in the same `UPDATE`). If two people check out the
+last piece at the same moment, only one reservation succeeds; the other gets
+a 409 "someone just bought one of the pieces in your cart" **before paying**.
+
+- Paid orders keep their reservation — that *is* the stock decrement, so
+  verify-payment / the Razorpay webhook / PayPal capture skip the old
+  post-payment decrement when `orders.stock_reserved` is true.
+- A failed payment (`markOrderFailed`) returns the stock immediately.
+- An abandoned checkout returns its stock after **30 minutes**
+  (`release_stale_reservations()`, run before product reads). The order stays
+  `pending`, so a very late payment is still recorded as paid and falls back
+  to a plain decrement.
+- The three functions are `security definer` with `execute` revoked from
+  `anon`/`authenticated` — only the server's service-role key can call them.
+- Until `schema.sql` has been re-run (functions missing), checkout keeps
+  working the old way (decrement after payment).
+
+**Never guesses prices.** If the database can't be reached during checkout,
+the create-order routes return 503 "please try again" — they never fall back
+to the local seed catalog (`lib/data/products.ts`), whose rows share IDs with
+live products but have outdated prices/photos/active flags. Storefront pages
+likewise throw on a DB error, so Vercel's ISR keeps serving the last good
+cached page instead. The seed catalog is only used when Supabase isn't
+configured at all (local dev).
 
 If Supabase, Razorpay, or PayPal aren't configured, the relevant
 `create-order` route returns a friendly 503 instead of crashing, and the
@@ -283,18 +317,108 @@ secret one.
 
 ## Coupons
 
-A flat coupon system lives in [lib/coupons.ts](lib/coupons.ts) +
-`COUPONS` in [lib/constants.ts](lib/constants.ts). Two codes right now:
-**`CUTEJOY30`** (30% off, minimum ₹500 purchase, customer-entered) and
-**`LAUNCH50`** (50% off, no minimum, auto-applied sitewide with no code
-needed as long as `LAUNCH_OFFER_ACTIVE` is `true`). Flip that flag to `false`
-once the launch promo ends — `CUTEJOY30` keeps working either way. The cart
-page lets customers apply/remove a different code and previews the discount;
-`/api/create-order` recomputes the discount server-side from the
-authoritative subtotal before creating the Razorpay order, so the
-client-side preview is never trusted for the actual charge. Add more codes
-directly in the `COUPONS` object — move this to a database table if you need
-expiry dates or per-customer codes later.
+Managed in **Admin → Coupons** (`coupons` table; `COUPONS` in
+[lib/constants.ts](lib/constants.ts) is only the fallback if the table is
+missing). Each coupon has:
+
+- **% off** (0–100) and a **minimum purchase in ₹**.
+- **Active** — off = the code stops working entirely, including auto-apply.
+- **Auto-apply** — applied to every order with no code needed. Auto-apply
+  coupons are a domestic launch incentive: they're excluded from PayPal (USD)
+  orders, and the homepage/navbar banner says "in India".
+- **Shipping override, by destination** — one amount in **₹ for orders
+  shipping within India**, one in **$ for international orders**. Blank =
+  normal shipping rules, `0` = free shipping, any other amount = flat charge.
+  If an order is charged in the other currency (e.g. an international buyer
+  paying in ₹ via Razorpay), the amount is converted at `USD_INR_RATE`.
+  A coupon may be **0% off** if it only changes shipping (e.g. a FREESHIP code).
+  Example: `FREE4UCUTIE` = 100% off, ₹10 shipping in India, $1 shipping
+  internationally.
+
+Discount math lives in [lib/coupons.ts](lib/coupons.ts) and shipping in
+[lib/shipping.ts](lib/shipping.ts); both are shared by the cart/checkout
+preview and the create-order routes, which recompute everything server-side —
+the client preview is never trusted for the actual charge. For PayPal orders
+the ₹ minimum purchase is compared against the USD subtotal's INR equivalent.
+
+## Shipping
+
+[lib/shipping.ts](lib/shipping.ts) + constants in [lib/constants.ts](lib/constants.ts):
+
+| Destination | Rule |
+|---|---|
+| India | ₹`SHIPPING_FLAT_RATE_INR` (99), free at or above ₹`FREE_SHIPPING_THRESHOLD_INR` (900) |
+| International | zone flat rate (`INTERNATIONAL_SHIPPING_ZONES`), free at or above $`FREE_SHIPPING_THRESHOLD_USD_INTERNATIONAL` (75) |
+
+Thresholds are checked against what the customer pays for items (after the
+coupon discount). A coupon's shipping override (above) replaces these rules.
+
+## Categories
+
+Category names/descriptions live in `CATEGORIES` in
+[lib/constants.ts](lib/constants.ts) (adding a new one is a code change).
+**Admin → Categories** controls the rest, saved in the `category_order` table:
+
+- **Enable/disable switch** — saves instantly. A disabled category, and every
+  product in it, disappears from the homepage, shop, and product pages, and
+  those products can't be checked out. The products themselves are not
+  modified, so re-enabling restores everything.
+- **Drag to reorder** — which category shows first on the shop page and in
+  the homepage highlight.
+- Shop filter tabs only show categories that are enabled **and** have at
+  least one active product, so customers never land on an empty tab.
+
+## Customer emails
+
+All templates are editable in **Admin → Emails** (`email_templates` table;
+defaults in [lib/email-templates.ts](lib/email-templates.ts)).
+
+- **Order delivered** includes `{{review_button}}` — a "Tell us what you
+  think" button that opens an email to you pre-filled with the order number,
+  plus a nudge to tag the shop on Instagram.
+- **Abandoned checkout reminder** (`abandoned_cart`) — sent once per customer
+  by a daily Vercel Cron job (see [vercel.json](vercel.json); 04:30 UTC =
+  10:00 IST) via `/api/cron/abandoned-carts` →
+  [lib/abandoned-carts.ts](lib/abandoned-carts.ts). It targets checkouts where
+  the customer clicked Pay (so an order row exists) but never paid, 1 hour to
+  3 days old. Skipped if the customer has since paid for an order, was already
+  reminded in that window, or every item has sold out/been hidden (sold-out
+  items are dropped from the email). Each order is marked
+  (`abandoned_reminder_sent_at`) before sending, so it can't double-send.
+  Requires `CRON_SECRET`. Turn it off any time with the template's Active
+  switch.
+
+## WhatsApp & Instagram
+
+- **WhatsApp** — number in `SITE.whatsappNumber` ([lib/constants.ts](lib/constants.ts),
+  digits only with country code). A floating "Chat with us" button shows on
+  every customer page (hidden in `/admin`); on a product page it pre-fills a
+  message with the product link. Also a card in the homepage contact section,
+  and a link in the abandoned-checkout email.
+- **Instagram feed — on hold.** [lib/instagram.ts](lib/instagram.ts) can show
+  the latest 8 posts on the homepage via a free [Behold.so](https://behold.so)
+  JSON feed, but it's dormant until `INSTAGRAM_FEED_URL` is set. To turn it
+  on later: sign up at behold.so with the shop's Instagram, create a feed,
+  copy its JSON feed URL into `INSTAGRAM_FEED_URL` on Vercel, and redeploy.
+
+## Database changes & data safety
+
+The live catalog, coupons, categories, and email templates are edited from
+the admin dashboard, and **those edits must never be lost**. Rules for
+[supabase/schema.sql](supabase/schema.sql):
+
+- Seed `insert`s always use `on conflict ... do nothing` (never `do update`)
+  — they only fill in rows that don't exist yet. (Before 2026-10-15 the
+  product seed used `do update` and would have reset 29 live products'
+  prices, photos, and active flags if re-run. Fixed.)
+- Schema changes are additive only: `add column if not exists` with safe
+  defaults, `create or replace function`. No `update`/`delete`/`truncate`/
+  `drop table` on admin-managed tables.
+- Admin save functions only write the fields their form edits.
+- Every new feature degrades gracefully if `schema.sql` hasn't been re-run
+  yet (e.g. checkout falls back to post-payment stock decrement; coupon
+  shipping fields are ignored), but some admin saves (coupon edits, category
+  switches) fail until it is — **re-run it after each deploy that changes it.**
 
 ## TODO: replace with real content before launch
 

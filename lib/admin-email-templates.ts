@@ -61,7 +61,7 @@ export function validateEmailTemplateUpdate(input: Partial<EmailTemplateUpdate>)
 }
 
 /**
- * Templates are seeded by the supabase/schema.sql migration (fixed 5 keys,
+ * Templates are seeded by the supabase/schema.sql migration (fixed keys,
  * no admin-driven create/delete) — this is an UPDATE-only op, same shape as
  * adminUpdateCustomType.
  */
@@ -72,17 +72,24 @@ export async function adminUpdateEmailTemplate(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { error: "Database isn't configured." };
 
-  const { data, error } = await supabase
-    .from("email_templates")
-    .update({
-      subject: update.subject.trim(),
-      html: update.html,
-      active: update.active,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("key", key)
-    .select()
-    .single();
+  const fields = {
+    subject: update.subject.trim(),
+    html: update.html,
+    active: update.active,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { data, error } = await supabase.from("email_templates").update(fields).eq("key", key).select().maybeSingle();
+
+  // A template key added after the table was seeded (e.g. abandoned_cart)
+  // has no row until it's first saved — create it rather than failing.
+  if (!error && !data) {
+    ({ data, error } = await supabase
+      .from("email_templates")
+      .insert({ key, name: DEFAULT_EMAIL_TEMPLATES[key].name, ...fields })
+      .select()
+      .single());
+  }
 
   if (error || !data) {
     return {

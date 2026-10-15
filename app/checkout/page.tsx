@@ -9,10 +9,10 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCartStore, cartSubtotalInr } from "@/lib/store/cart";
 import { calculateDiscount } from "@/lib/coupons";
 import { useCoupons } from "@/lib/hooks/useCoupons";
-import { calculateShipping } from "@/lib/shipping";
-import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE } from "@/lib/constants";
+import { calculateShipping, calculateShippingUsd } from "@/lib/shipping";
+import { COUNTRIES, CUSTOM_ORDER_TIMELINE_NOTE, PHONE_CASE_CATEGORIES, PHONE_MODELS, SITE, USD_INR_RATE } from "@/lib/constants";
 import { formatUsdApprox } from "@/lib/pricing";
-import { GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
+import { ChevronLeftIcon, GiftIcon, SparkleIcon, WandIcon } from "@/components/Icons";
 
 declare global {
   interface Window {
@@ -138,7 +138,13 @@ export default function CheckoutPage() {
   const subtotalInr = cartSubtotalInr(items);
   const { discount, coupon } = calculateDiscount(subtotalInr, couponCode, effectiveCoupons);
   const payableInr = Math.max(0, subtotalInr - discount);
-  const shippingInr = calculateShipping(payableInr, form.country);
+  // PayPal orders are charged in USD (calculateShippingUsd server-side, incl.
+  // the USD free-shipping threshold) — shown here as the INR equivalent,
+  // since this preview is INR with a "(~$X USD)" approximation alongside.
+  const shippingInr =
+    paymentMethod === "paypal"
+      ? Math.round(calculateShippingUsd(payableInr / USD_INR_RATE, form.country, coupon) * USD_INR_RATE * 100) / 100
+      : calculateShipping(payableInr, form.country, coupon);
   const totalInr = payableInr + shippingInr;
   const hasCustomItem = items.some((i) => i.kind === "custom");
   const isInternational = !!form.country && form.country !== "India";
@@ -367,6 +373,14 @@ export default function CheckoutPage() {
         onLoad={() => setScriptReady(true)}
       />
 
+      <div className="mb-4">
+        <Link
+          href="/cart"
+          className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 font-heading text-sm font-semibold text-ink/70 shadow-soft transition-colors hover:bg-blush-light hover:text-pastel"
+        >
+          <ChevronLeftIcon className="h-4 w-4" /> Back to cart
+        </Link>
+      </div>
       <h1 className="font-heading text-3xl font-bold text-ink sm:text-4xl">Checkout</h1>
 
       {hasCustomItem && (

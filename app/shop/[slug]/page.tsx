@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug } from "@/lib/products";
 import { CATEGORIES, SITE } from "@/lib/constants";
+import { BackButton } from "@/components/BackButton";
 import { getDisplayPricing } from "@/lib/pricing";
 import { ProductPurchaseActions } from "@/components/ProductPurchaseActions";
 import { ProductCard } from "@/components/ProductCard";
@@ -86,6 +87,9 @@ export default async function ProductPage({
           },
         }}
       />
+      <div className="mb-4">
+        <BackButton fallbackHref={category ? `/shop?category=${category.slug}` : "/shop"} />
+      </div>
       <nav className="mb-8 text-sm text-ink/50">
         <Link href="/shop" className="hover:text-pastel">Shop</Link>
         {category && (

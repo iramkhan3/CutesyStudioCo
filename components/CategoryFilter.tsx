@@ -7,9 +7,16 @@ import { CATEGORIES } from "@/lib/constants";
 // a customer would think to browse separately.
 const FILTERABLE_CATEGORIES = CATEGORIES.filter((c) => c.slug !== "ready-to-ship");
 
-export function CategoryFilter({ active }: { active?: string }) {
+/**
+ * `available` = slugs that currently have at least one visible product
+ * (already excludes admin-disabled categories) — empty categories are left
+ * out so customers never land on an empty tab. The active tab always shows.
+ */
+export function CategoryFilter({ active, available }: { active?: string; available: Set<string> }) {
+  const visible = FILTERABLE_CATEGORIES.filter((c) => available.has(c.slug) || c.slug === active);
+
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap justify-center gap-2">
       <Link
         href="/shop"
         className={`rounded-full px-4 py-2 font-heading text-sm font-semibold transition-colors ${
@@ -18,7 +25,7 @@ export function CategoryFilter({ active }: { active?: string }) {
       >
         All
       </Link>
-      {FILTERABLE_CATEGORIES.map((cat) => (
+      {visible.map((cat) => (
         <Link
           key={cat.slug}
           href={`/shop?category=${cat.slug}`}

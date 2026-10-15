@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import type { AdminCouponRow } from "@/lib/admin-coupons";
 
-type FormState = { percent_off: string; min_purchase_inr: string; active: boolean; auto_apply: boolean };
+type FormState = {
+  percent_off: string;
+  min_purchase_inr: string;
+  active: boolean;
+  auto_apply: boolean;
+  shipping_override_inr: string;
+  shipping_override_usd: string;
+};
 
 function toForm(row: AdminCouponRow): FormState {
   return {
@@ -11,7 +18,19 @@ function toForm(row: AdminCouponRow): FormState {
     min_purchase_inr: String(row.min_purchase_inr),
     active: row.active,
     auto_apply: row.auto_apply,
+    shipping_override_inr: row.shipping_override_inr == null ? "" : String(row.shipping_override_inr),
+    shipping_override_usd: row.shipping_override_usd == null ? "" : String(row.shipping_override_usd),
   };
+}
+
+// Blank = normal shipping rules (null); otherwise the flat charge, 0 = free.
+function parseShippingOverride(value: string): number | null {
+  return value.trim() === "" ? null : Number(value);
+}
+
+function shippingHint(value: string): string {
+  if (value.trim() === "") return "Normal rates";
+  return Number(value) === 0 ? "Free shipping" : "Flat rate";
 }
 
 function CouponRow({ row, onSaved, onDeleted }: { row: AdminCouponRow; onSaved: (r: AdminCouponRow) => void; onDeleted: (code: string) => void }) {
@@ -33,6 +52,8 @@ function CouponRow({ row, onSaved, onDeleted }: { row: AdminCouponRow; onSaved: 
           min_purchase_inr: Number(form.min_purchase_inr),
           active: form.active,
           auto_apply: form.auto_apply,
+          shipping_override_inr: parseShippingOverride(form.shipping_override_inr),
+          shipping_override_usd: parseShippingOverride(form.shipping_override_usd),
         }),
       });
       const data = await res.json();
@@ -66,7 +87,7 @@ function CouponRow({ row, onSaved, onDeleted }: { row: AdminCouponRow; onSaved: 
         <div className="flex items-center gap-1">
           <input
             type="number"
-            min={1}
+            min={0}
             max={100}
             value={form.percent_off}
             onChange={(e) => setForm((f) => ({ ...f, percent_off: e.target.value }))}
@@ -85,6 +106,30 @@ function CouponRow({ row, onSaved, onDeleted }: { row: AdminCouponRow; onSaved: 
             onChange={(e) => setForm((f) => ({ ...f, min_purchase_inr: e.target.value }))}
             className="w-20 rounded-lg border border-ink/15 px-2 py-1 text-sm"
           />
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex flex-col gap-2">
+          {(["inr", "usd"] as const).map((cur) => {
+            const key = cur === "inr" ? "shipping_override_inr" : "shipping_override_usd";
+            return (
+              <div key={cur}>
+                <div className="flex items-center gap-1">
+                  <span className="w-24 text-xs text-ink-light">{cur === "inr" ? "India ₹" : "International $"}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={cur === "usd" ? 0.01 : 1}
+                    value={form[key]}
+                    placeholder="—"
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    className="w-20 rounded-lg border border-ink/15 px-2 py-1 text-sm"
+                  />
+                </div>
+                <p className="ml-24 mt-0.5 text-xs text-ink-light">{shippingHint(form[key])}</p>
+              </div>
+            );
+          })}
         </div>
       </td>
       <td className="px-4 py-3">
@@ -133,6 +178,8 @@ function NewCouponForm({ onCreated }: { onCreated: (r: AdminCouponRow) => void }
   const [percentOff, setPercentOff] = useState("10");
   const [minPurchase, setMinPurchase] = useState("0");
   const [autoApply, setAutoApply] = useState(false);
+  const [shippingOverride, setShippingOverride] = useState("");
+  const [shippingOverrideUsd, setShippingOverrideUsd] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,6 +196,8 @@ function NewCouponForm({ onCreated }: { onCreated: (r: AdminCouponRow) => void }
           min_purchase_inr: Number(minPurchase),
           active: true,
           auto_apply: autoApply,
+          shipping_override_inr: parseShippingOverride(shippingOverride),
+          shipping_override_usd: parseShippingOverride(shippingOverrideUsd),
         }),
       });
       const data = await res.json();
@@ -158,6 +207,8 @@ function NewCouponForm({ onCreated }: { onCreated: (r: AdminCouponRow) => void }
       setPercentOff("10");
       setMinPurchase("0");
       setAutoApply(false);
+      setShippingOverride("");
+      setShippingOverrideUsd("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create coupon.");
     } finally {
@@ -180,11 +231,34 @@ function NewCouponForm({ onCreated }: { onCreated: (r: AdminCouponRow) => void }
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink-light">% off</label>
-          <input type="number" min={1} max={100} value={percentOff} onChange={(e) => setPercentOff(e.target.value)} className="w-20 rounded-xl2 border border-ink/15 px-3 py-2 text-sm outline-none focus:border-pastel" />
+          <input type="number" min={0} max={100} value={percentOff} onChange={(e) => setPercentOff(e.target.value)} className="w-20 rounded-xl2 border border-ink/15 px-3 py-2 text-sm outline-none focus:border-pastel" />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink-light">Min purchase (₹)</label>
           <input type="number" min={0} value={minPurchase} onChange={(e) => setMinPurchase(e.target.value)} className="w-28 rounded-xl2 border border-ink/15 px-3 py-2 text-sm outline-none focus:border-pastel" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-light">Shipping in India (₹) — {shippingHint(shippingOverride)}</label>
+          <input
+            type="number"
+            min={0}
+            value={shippingOverride}
+            onChange={(e) => setShippingOverride(e.target.value)}
+            placeholder="Blank = normal"
+            className="w-36 rounded-xl2 border border-ink/15 px-3 py-2 text-sm outline-none focus:border-pastel"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-light">International shipping ($) — {shippingHint(shippingOverrideUsd)}</label>
+          <input
+            type="number"
+            min={0}
+            step={0.01}
+            value={shippingOverrideUsd}
+            onChange={(e) => setShippingOverrideUsd(e.target.value)}
+            placeholder="Blank = normal"
+            className="w-36 rounded-xl2 border border-ink/15 px-3 py-2 text-sm outline-none focus:border-pastel"
+          />
         </div>
         <label className="mb-2 flex items-center gap-2 text-sm text-ink">
           <input type="checkbox" checked={autoApply} onChange={(e) => setAutoApply(e.target.checked)} className="h-4 w-4" />
@@ -242,7 +316,10 @@ export default function AdminCouponsPage() {
       <p className="mt-1 max-w-2xl text-ink-light">
         Manage discount codes. &quot;Auto-apply&quot; means it&apos;s applied to every order automatically with no
         code needed (like the sitewide launch offer) — turn a coupon&apos;s &quot;Active&quot; off to disable it
-        entirely, including auto-apply.
+        entirely, including auto-apply. &quot;Shipping&quot; overrides the shipping charge when the coupon is
+        applied — one amount in ₹ for orders shipping within India, one in $ for international orders (whichever
+        way they pay): leave it blank for normal rates, 0 for
+        free shipping, or any amount for a flat charge.
       </p>
 
       {error && (
@@ -255,12 +332,13 @@ export default function AdminCouponsPage() {
 
       {!loading && (
         <div className="mt-6 overflow-x-auto rounded-xl2 border border-blush-light bg-white">
-          <table className="w-full min-w-[600px] text-left text-sm">
+          <table className="w-full min-w-[700px] text-left text-sm">
             <thead className="bg-blush-light/50 text-ink-light">
               <tr>
                 <th className="px-4 py-3 font-semibold">Code</th>
                 <th className="px-4 py-3 font-semibold">% Off</th>
                 <th className="px-4 py-3 font-semibold">Min Purchase</th>
+                <th className="px-4 py-3 font-semibold">Shipping</th>
                 <th className="px-4 py-3 font-semibold">Active</th>
                 <th className="px-4 py-3 font-semibold">Auto-apply</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
@@ -269,7 +347,7 @@ export default function AdminCouponsPage() {
             <tbody>
               {coupons.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-ink-light">
+                  <td colSpan={7} className="px-4 py-6 text-center text-ink-light">
                     No coupons yet — the site falls back to the built-in defaults until you add one, or until the
                     supabase/schema.sql coupons migration is run.
                   </td>

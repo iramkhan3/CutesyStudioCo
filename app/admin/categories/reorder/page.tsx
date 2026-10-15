@@ -11,6 +11,7 @@ export default function ReorderCategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
   const dragIndex = useRef<number | null>(null);
 
   useEffect(() => {
@@ -58,6 +59,28 @@ export default function ReorderCategoriesPage() {
     dragIndex.current = null;
   }
 
+  // Saves immediately (independent of the drag order's "Save order" button),
+  // optimistically flipping the switch and reverting it if the save fails.
+  async function handleToggle(slug: string, enabled: boolean) {
+    setError(null);
+    setTogglingSlug(slug);
+    setCategories((prev) => prev.map((c) => (c.slug === slug ? { ...c, enabled } : c)));
+    try {
+      const res = await fetch(`/api/admin/categories/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update category.");
+    } catch (err) {
+      setCategories((prev) => prev.map((c) => (c.slug === slug ? { ...c, enabled: !enabled } : c)));
+      setError(err instanceof Error ? err.message : "Failed to update category.");
+    } finally {
+      setTogglingSlug(null);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -87,10 +110,11 @@ export default function ReorderCategoriesPage() {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-ink">Reorder categories</h1>
+          <h1 className="font-heading text-3xl font-bold text-ink">Categories</h1>
           <p className="mt-1 max-w-xl text-ink-light">
-            Drag to choose which category shows first on the Shop page and in the homepage highlight — phone cases
-            lead by default. Within a category, use{" "}
+            Use the switch to turn a category on or off — a disabled category, and every product in it, is hidden
+            from the site instantly (the products themselves aren&apos;t changed). Drag to choose which category
+            shows first on the Shop page and in the homepage highlight. Within a category, use{" "}
             <Link href="/admin/products/reorder" className="underline">
               Reorder products
             </Link>{" "}
@@ -129,12 +153,34 @@ export default function ReorderCategoriesPage() {
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
-              className="flex cursor-grab items-center gap-3 rounded-xl2 border border-blush-light bg-white p-3 shadow-soft active:cursor-grabbing"
+              className={`flex cursor-grab items-center gap-3 rounded-xl2 border border-blush-light bg-white p-3 shadow-soft active:cursor-grabbing ${
+                c.enabled ? "" : "opacity-60"
+              }`}
             >
               <span className="w-8 text-center text-sm font-bold text-ink-light">{i + 1}</span>
               <span className="text-ink-light">⠿</span>
-              <span className="font-semibold text-ink">{c.name}</span>
-              <span className="ml-auto text-xs text-ink-light">{c.slug}</span>
+              <span className="min-w-0">
+                <span className="block font-semibold text-ink">{c.name}</span>
+                <span className="block text-xs text-ink-light">
+                  {c.productCount} active product{c.productCount === 1 ? "" : "s"}
+                  {c.enabled && c.productCount === 0 && " · hidden from shop filters until it has one"}
+                </span>
+              </span>
+              <label className="ml-auto flex shrink-0 cursor-pointer items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
+                <span className={`text-xs font-semibold ${c.enabled ? "text-green-700" : "text-ink-light"}`}>
+                  {c.enabled ? "Enabled" : "Disabled"}
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label={`${c.enabled ? "Disable" : "Enable"} ${c.name}`}
+                  checked={c.enabled}
+                  disabled={togglingSlug === c.slug}
+                  onChange={(e) => handleToggle(c.slug, e.target.checked)}
+                  className="peer sr-only"
+                />
+                <span className="relative h-6 w-11 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-pastel peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-pastel peer-disabled:opacity-50" />
+              </label>
             </li>
           ))}
         </ol>

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getProductsByIds } from "@/lib/products";
 import { getPaypalConfig, getPaypalAccessToken } from "@/lib/paypal";
-import { createPendingOrder, attachPaypalOrderId } from "@/lib/orders";
+import { createPendingOrder, attachPaypalOrderId, markOrderFailed, reserveOrderStock } from "@/lib/orders";
 import { calculateDiscount } from "@/lib/coupons";
 import { getCoupons } from "@/lib/coupons-data";
 import { calculateShippingUsd } from "@/lib/shipping";
 import { getCustomProductTypes } from "@/lib/custom-types";
-import { PHONE_CASE_CATEGORIES } from "@/lib/constants";
+import { PHONE_CASE_CATEGORIES, USD_INR_RATE } from "@/lib/constants";
 import type { CustomProductType } from "@/lib/constants";
 import { firstImageUrl } from "@/lib/media";
 import type { CustomCaseSelection, OrderItemSnapshot, ShippingAddress } from "@/lib/types";
@@ -119,6 +119,9 @@ export async function POST(req: Request) {
   // --- authoritative USD pricing/stock from the database, never the client --
   const productIds = items.filter((i) => i.kind === "product").map((i) => i.productId);
   const products = productIds.length ? await getProductsByIds(productIds) : [];
+  if (!products) {
+    return NextResponse.json({ error: "We couldn't confirm your items right now. Please try again in a moment." }, { status: 503 });
+  }
 
   const orderItems: OrderItemSnapshot[] = [];
   for (const item of items) {
@@ -178,10 +181,9 @@ export async function POST(req: Request) {
 
   // --- coupon (authoritative — recomputed here, never trusts a client amount) --
   // calculateDiscount() is pure percentage math against whatever amount is
-  // passed in, so it works fine against a USD subtotal too. The one caveat:
-  // CUTEJOY30's minPurchaseInr (₹500) is an INR-denominated threshold and
-  // isn't converted here — a manually-entered coupon's minimum purchase gate
-  // may behave oddly for USD orders.
+  // passed in, so it works fine against a USD subtotal too. A coupon's
+  // minimum purchase is in ₹, so it's checked against the USD subtotal's INR
+  // equivalent (USD_INR_RATE) rather than the raw dollar figure.
   //
   // Auto-applied coupons (currently the LAUNCH50 launch offer) are excluded
   // entirely for PayPal/USD orders — that promo is a domestic (INR) launch
@@ -189,13 +191,13 @@ export async function POST(req: Request) {
   // the list passed to calculateDiscount blocks both the auto-apply and a
   // customer manually typing the same code.
   const coupons = (await getCoupons()).filter((c) => !c.autoApply);
-  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode, coupons);
+  const { discount, coupon, error: couponError } = calculateDiscount(subtotal, couponCode, coupons, subtotal * USD_INR_RATE);
   if (couponCode && couponCode.trim() && !coupon) {
     return NextResponse.json({ error: couponError || "That coupon code isn't valid." }, { status: 400 });
   }
 
   const payableAmount = Math.max(0, subtotal - discount);
-  const shippingAmount = calculateShippingUsd(payableAmount, shippingAddress.country);
+  const shippingAmount = calculateShippingUsd(payableAmount, shippingAddress.country, coupon);
   const totalAmount = payableAmount + shippingAmount;
 
   if (totalAmount < 1) {
@@ -233,8 +235,20 @@ export async function POST(req: Request) {
     );
   }
 
+  const reservation = await reserveOrderStock(order.id);
+  if (reservation === "out_of_stock" || reservation === "error") {
+    await markOrderFailed(order.id);
+    return reservation === "out_of_stock"
+      ? NextResponse.json(
+          { error: "Sorry — someone just bought one of the pieces in your cart. Please refresh your cart and try again." },
+          { status: 409 }
+        )
+      : NextResponse.json({ error: "Something went wrong reserving your items. Please try again." }, { status: 503 });
+  }
+
   const accessToken = await getPaypalAccessToken(paypalConfig);
   if (!accessToken) {
+    await markOrderFailed(order.id);
     return NextResponse.json({ error: "Payment provider error. Please try again shortly." }, { status: 500 });
   }
 
@@ -261,6 +275,7 @@ export async function POST(req: Request) {
     if (!paypalRes.ok) {
       const errBody = await paypalRes.text();
       console.error("[paypal/create-order] PayPal API error:", paypalRes.status, errBody);
+      await markOrderFailed(order.id).catch(() => {});
       return NextResponse.json({ error: "Payment provider error. Please try again shortly." }, { status: 500 });
     }
 
@@ -275,6 +290,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[paypal/create-order] error:", err);
+    await markOrderFailed(order.id).catch(() => {});
     return NextResponse.json({ error: "Payment provider error. Please try again shortly." }, { status: 500 });
   }
 }
